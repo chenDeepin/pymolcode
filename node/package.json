@@ -1,0 +1,24 @@
+{
+  "name": "pymolcode-node",
+  "version": "0.1.0",
+  "description": "Node.js bridge client for pymolcode",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "bun test",
+    "lint": "eslint src/",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@types/node": "^20.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "bun-types": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

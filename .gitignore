@@ -1,0 +1,126 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# Testing (test code is excluded from repo)
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Jupyter
+.ipynb_checkpoints/
+.checkpoints/
+
+# Distribution
+*.manifest
+*.spec
+
+# Logs
+*.log
+logs/
+
+# Local configuration
+.env
+.env.local
+*.local.yaml
+
+# Artifacts (generated outputs)
+artifacts/
+outputs/
+results/
+.pymolcode_artifacts/
+!**/.gitkeep
+
+# Generated screenshots and structures (keep folder structure)
+*.png
+!docs/**/*.png
+
+# PyMOL session files
+*.pse
+*.psw
+
+# Molecular structure files (large, downloaded/generated)
+*.pdb
+*.mol2
+*.sdf
+*.cif
+*.mmcif
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# OS
+.DS_Store
+Thumbs.db
+
+# UV
+.uv/
+
+# Cursor IDE
+.cursor/
+
+# Sisyphus
+.sisyphus/
+
+# Memory system - track core files, exclude daily sessions
+memory/
+!memory/memory.yaml
+!memory/lessons.yaml
+!memory/now.yaml
+!memory/.gitkeep
+
+# Node
+node_modules/
+*.tsbuildinfo
+
+# Reference copies (excluded from repo)
+scripts/opencode-dev/
+scripts/pymol-open-source-master/
+third-party/
+
+# Generated documentation
+AGENTS_RULE.md
