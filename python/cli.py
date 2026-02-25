@@ -215,6 +215,7 @@ def main(argv: list[str] | None = None) -> int:
 
     import tempfile
 
+    splash_png = str(Path(root) / "python" / "pymol" / "assets" / "splash.png")
     startup_code = (
         "import sys, os\n"
         f"sys.path.insert(0, {root!r})\n"
@@ -222,13 +223,20 @@ def main(argv: list[str] | None = None) -> int:
         "from pymol import cmd\n"
         "cmd.set('internal_gui_width', 350)\n"
         "init_plugin()\n"
+        f"if os.path.exists({splash_png!r}):\n"
+        f"    cmd.load_png({splash_png!r}, 0, quiet=1)\n"
+        "print()\n"
+        "print(' PymolCode \\u2014 LLM-Enhanced Molecular Visualization')\n"
+        "print(' Built using PyMOL\\u2122 technology.')\n"
+        "print(' PyMOL is a trademark of Schr\\u00f6dinger, LLC.')\n"
+        "print()\n"
     )
     fd, startup_path = tempfile.mkstemp(suffix=".py", prefix="pymolcode_startup_")
     try:
         os.write(fd, startup_code.encode())
         os.close(fd)
 
-        pymol_argv = [sys.executable, "-m", "pymol", "-r", startup_path]
+        pymol_argv = [sys.executable, "-m", "pymol", "-q", "-r", startup_path]
         pymol_argv.extend(args.pymol_args or [])
 
         os.execvpe(sys.executable, pymol_argv, os.environ)

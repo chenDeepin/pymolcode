@@ -76,6 +76,10 @@ results/
 # Generated screenshots and structures (keep folder structure)
 *.png
 !docs/**/*.png
+!python/pymol/assets/splash.png
+
+# Splash screen generator (not needed in repo)
+python/pymol/assets/gen_splash.py
 
 # PyMOL session files
 *.pse
