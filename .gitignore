@@ -124,3 +124,6 @@ third-party/
 
 # Generated documentation
 AGENTS_RULE.md
+
+# Architecture plans (internal)
+ARCHITECTURE_PLAN.md
