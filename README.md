@@ -190,18 +190,28 @@ $ pymolcode ultrawork "Load 3KYS, identify binding pockets, and generate a repor
 
 ## Skills
 
-Built-in drug discovery skills:
+### Built-in Skills
+
+Core skills implemented in pymolcode:
 
 | Skill | Description |
 |-------|-------------|
-| `protein_prep` | Structure preparation (protonation, optimization) |
-| `ligand_prep` | Ligand preparation (standardization, 3D generation) |
-| `pocket_analysis` | Binding site detection and druggability scoring |
-| `docking_batch` | High-throughput molecular docking |
-| `interaction_map` | Protein-ligand contact analysis |
-| `pose_compare` | RMSD and interaction fingerprint comparison |
-| `hit_prioritize` | Multi-criteria hit ranking |
-| `session_report` | Automated documentation generation |
+| `structure_analysis` | Analyze molecular structure and generate comprehensive reports |
+| `binding_site_analysis` | Identify and characterize potential binding sites in proteins |
+| `ligand_comparison` | Compare multiple ligand structures with alignment reports |
+| `trajectory_analysis` | Analyze molecular dynamics trajectories (RMSD, RMSF) |
+
+### Reference Skills
+
+The `skills/` directory contains reference implementations from external projects for extended capabilities:
+
+| Category | Description |
+|----------|-------------|
+| `01-scientific/` | Cheminformatics, structural biology, genomics |
+| `02-research/` | Drug discovery research (target search, trends) |
+| `03-ai-ml/` | Machine learning and AI model training |
+
+> **Note**: Reference skills are educational materials from [OpenCode](https://github.com/sst/opencode), [Orchestra Research](https://github.com/orchestra-research), and [Trail of Bits](https://github.com/trailofbits). See [skills/SOURCES.md](./skills/SOURCES.md) for attribution.
 
 ## Configuration
 

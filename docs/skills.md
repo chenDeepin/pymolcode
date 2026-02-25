@@ -8,16 +8,14 @@ Skills are domain-specific agent capabilities for drug discovery workflows. Each
 
 ## Built-in Skills
 
+Core skills implemented in `python/skill/builtin.py`:
+
 | Skill | Description |
 |-------|-------------|
-| `protein_prep` | Structure preparation (protonation, optimization) |
-| `ligand_prep` | Ligand preparation (standardization, 3D generation) |
-| `pocket_analysis` | Binding site detection and druggability scoring |
-| `docking_batch` | High-throughput molecular docking |
-| `interaction_map` | Protein-ligand contact analysis |
-| `pose_compare` | RMSD and interaction fingerprint comparison |
-| `hit_prioritize` | Multi-criteria hit ranking |
-| `session_report` | Automated documentation generation |
+| `structure_analysis` | Analyze molecular structure and generate comprehensive reports |
+| `binding_site_analysis` | Identify and characterize potential binding sites in proteins |
+| `ligand_comparison` | Compare multiple ligand structures with alignment reports |
+| `trajectory_analysis` | Analyze molecular dynamics trajectories (RMSD, RMSF) |
 
 ## Skill Workflow
 
@@ -32,7 +30,7 @@ precheck → run → validate → summarize → persist
 ### Via CLI
 
 ```bash
-pymolcode skill run pocket_analysis --target 3KYS
+pymolcode skill run binding_site_analysis --object-name 3KYS
 ```
 
 ### Via Python API
@@ -41,8 +39,8 @@ pymolcode skill run pocket_analysis --target 3KYS
 from python.skill import SkillRegistry
 
 registry = SkillRegistry()
-skill = registry.get("pocket_analysis")
-result = await skill.execute(target="3KYS")
+skill = registry.get("binding_site_analysis")
+result = await skill.execute(object_name="3KYS")
 ```
 
 ### Via JSON-RPC
@@ -52,8 +50,8 @@ result = await skill.execute(target="3KYS")
   "jsonrpc": "2.0",
   "method": "skill.execute",
   "params": {
-    "name": "pocket_analysis",
-    "args": {"target": "3KYS"}
+    "name": "binding_site_analysis",
+    "args": {"object_name": "3KYS"}
   }
 }
 ```
