@@ -221,7 +221,7 @@ def main(argv: list[str] | None = None) -> int:
         f"sys.path.insert(0, {root!r})\n"
         "from python.pymol.panel import init_plugin\n"
         "from pymol import cmd\n"
-        "cmd.set('internal_gui_width', 180)\n"
+        "cmd.set('internal_gui_width', 255)\n"
         "init_plugin()\n"
         f"if os.path.exists({splash_png!r}):\n"
         f"    cmd.load_png({splash_png!r}, 0, quiet=1)\n"
