@@ -66,8 +66,13 @@ class _ChatBubble(QtWidgets.QFrame):
         lbl_text = QtWidgets.QLabel(text)
         lbl_text.setWordWrap(True)
         lbl_text.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+        sp = lbl_text.sizePolicy()
+        sp.setHorizontalPolicy(QtWidgets.QSizePolicy.Expanding)
+        sp.setHeightForWidth(True)
+        lbl_text.setSizePolicy(sp)
         layout.addWidget(lbl_text)
 
+        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
         self.setStyleSheet(f"QFrame{{background:{bg}; border-radius:6px;}}")
 
 
@@ -82,7 +87,7 @@ class PymolcodePanel(QtWidgets.QDockWidget):
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__("pymolcode", parent)
         self.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea)
-        self.setMinimumWidth(340)
+        self.setMinimumWidth(300)
 
         self._agent: Agent | None = None
         self._session_id: str | None = None
@@ -191,7 +196,9 @@ class PymolcodePanel(QtWidgets.QDockWidget):
 
     def _append(self, role: str, text: str) -> None:
         self._chat_layout.addWidget(_ChatBubble(role, text))
-        QtCore.QTimer.singleShot(50, self._scroll_bottom)
+        self._chat_box.adjustSize()
+        QtCore.QTimer.singleShot(100, self._scroll_bottom)
+        QtCore.QTimer.singleShot(500, self._scroll_bottom)
 
     def _scroll_bottom(self) -> None:
         sb = self._scroll.verticalScrollBar()
@@ -293,6 +300,14 @@ class PymolcodePanel(QtWidgets.QDockWidget):
 # ---------------------------------------------------------------------------
 
 
+def _rebrand_windows(qt_app: Any) -> None:
+    """Rename all top-level windows from 'PyMOL' to 'PymolCode'."""
+    for w in qt_app.topLevelWidgets():
+        title = w.windowTitle()
+        if title and "PyMOL" in title:
+            w.setWindowTitle(title.replace("PyMOL", "PymolCode"))
+
+
 def init_plugin(app: Any = None) -> PymolcodePanel | None:
     """Create and dock the panel into the active PyMOL QMainWindow.
 
@@ -302,9 +317,15 @@ def init_plugin(app: Any = None) -> PymolcodePanel | None:
     qt_app = app or QtWidgets.QApplication.instance()
     if qt_app is None:
         return None
+
+    qt_app.setApplicationName("PymolCode")
+    qt_app.setApplicationDisplayName("PymolCode")
+
     main_win = qt_app.activeWindow()
     if main_win is None:
         return None
+
+    main_win.setWindowTitle("PymolCode")
 
     panel = PymolcodePanel(main_win)
     main_win.addDockWidget(QtCore.Qt.RightDockWidgetArea, panel)
@@ -316,6 +337,9 @@ def init_plugin(app: Any = None) -> PymolcodePanel | None:
             panel.set_pymol_cmd(pymol.cmd)
     except ImportError:
         pass
+
+    QtCore.QTimer.singleShot(500, lambda: _rebrand_windows(qt_app))
+    QtCore.QTimer.singleShot(2000, lambda: _rebrand_windows(qt_app))
 
     LOGGER.info("pymolcode panel docked")
     return panel

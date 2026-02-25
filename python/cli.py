@@ -221,7 +221,7 @@ def main(argv: list[str] | None = None) -> int:
         f"sys.path.insert(0, {root!r})\n"
         "from python.pymol.panel import init_plugin\n"
         "from pymol import cmd\n"
-        "cmd.set('internal_gui_width', 350)\n"
+        "cmd.set('internal_gui_width', 180)\n"
         "init_plugin()\n"
         f"if os.path.exists({splash_png!r}):\n"
         f"    cmd.load_png({splash_png!r}, 0, quiet=1)\n"
@@ -236,7 +236,18 @@ def main(argv: list[str] | None = None) -> int:
         os.write(fd, startup_code.encode())
         os.close(fd)
 
-        pymol_argv = [sys.executable, "-m", "pymol", "-q", "-r", startup_path]
+        pymol_argv = [
+            sys.executable,
+            "-m",
+            "pymol",
+            "-q",
+            "-W",
+            "1400",
+            "-H",
+            "900",
+            "-r",
+            startup_path,
+        ]
         pymol_argv.extend(args.pymol_args or [])
 
         os.execvpe(sys.executable, pymol_argv, os.environ)
