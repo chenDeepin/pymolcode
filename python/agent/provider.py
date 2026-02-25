@@ -2,9 +2,10 @@
 
 Resolution order (first match wins):
 1. Explicit PYMOLCODE_MODEL + matching key  (full override)
-2. Environment variables for known providers (auto-detect)
-3. ~/.pymolcode/config.json  provider settings
-4. .env file in project root
+2. OAuth token store (~/.pymolcode/auth.json)
+3. Environment variables for known providers (auto-detect)
+4. ~/.pymolcode/config.json  provider settings
+5. .env file in project root
 
 LiteLLM model format: ``provider/model-name``
   - openai/gpt-4o
@@ -129,6 +130,7 @@ class ProviderInfo:
     model: str
     api_key: str
     api_base: str | None = None
+    auth_type: str = "api"  # "api" or "oauth"
 
     def to_litellm_kwargs(self) -> Dict[str, Any]:
         """Return kwargs for ``litellm.acompletion(...)``."""
@@ -198,6 +200,24 @@ def _find_key(env_vars: tuple[str, ...]) -> str | None:
     return None
 
 
+def _find_token_store_key(provider_id: str) -> tuple[str | None, str]:
+    """Check the OAuth token store for a saved credential.
+
+    Returns (api_key, auth_type) or (None, "api").
+    """
+    try:
+        from python.auth.token_store import TokenStore
+
+        store = TokenStore()
+        info = store.get(provider_id)
+        if info is not None and not info.is_expired and info.access_token:
+            auth_type = "api" if info.is_api_key else "oauth"
+            return info.access_token, auth_type
+    except Exception:
+        pass
+    return None, "api"
+
+
 def resolve_provider(
     *,
     model_override: str | None = None,
@@ -237,6 +257,10 @@ def resolve_provider(
         for pdef in _KNOWN_PROVIDERS:
             if pdef.id == config_provider_id:
                 key = config_api_key or _find_key(pdef.env_vars)
+                if not key:
+                    key, auth_type = _find_token_store_key(pdef.id)
+                else:
+                    auth_type = "api"
                 if key:
                     return ProviderInfo(
                         provider_id=pdef.id,
@@ -244,19 +268,19 @@ def resolve_provider(
                         model=config_model or pdef.default_model,
                         api_key=key,
                         api_base=config_api_base or pdef.api_base,
+                        auth_type=auth_type,
                     )
                 break
 
     # 3. Scan env vars for known providers (priority order)
     for pdef in _KNOWN_PROVIDERS:
         if pdef.id == "custom":
-            # Only use custom if OPENAI_API_BASE is also set
             if not os.environ.get("OPENAI_API_BASE"):
                 continue
         key = _find_key(pdef.env_vars)
+        auth_type = "api"
         if key:
             api_base = pdef.api_base
-            # For OpenAI-compat endpoints, check OPENAI_API_BASE
             if pdef.id == "custom":
                 api_base = os.environ.get("OPENAI_API_BASE")
             LOGGER.info("Auto-detected provider: %s", pdef.name)
@@ -266,25 +290,48 @@ def resolve_provider(
                 model=explicit_model or pdef.default_model,
                 api_key=key,
                 api_base=api_base,
+                auth_type=auth_type,
+            )
+
+    # 4. Check token store for any saved credentials
+    for pdef in _KNOWN_PROVIDERS:
+        if pdef.id == "custom":
+            continue
+        stored_key, auth_type = _find_token_store_key(pdef.id)
+        if stored_key:
+            LOGGER.info("Using stored credential for provider: %s", pdef.name)
+            return ProviderInfo(
+                provider_id=pdef.id,
+                provider_name=pdef.name,
+                model=explicit_model or pdef.default_model,
+                api_key=stored_key,
+                api_base=pdef.api_base,
+                auth_type=auth_type,
             )
 
     LOGGER.warning(
-        "No LLM provider found. Set one of: %s",
+        "No LLM provider found. Set one of: %s, or run: pymolcode auth login <provider>",
         ", ".join(v for pdef in _KNOWN_PROVIDERS for v in pdef.env_vars if pdef.id != "custom"),
     )
     return None
 
 
 def list_available_providers() -> List[ProviderInfo]:
-    """Return all providers that have a usable API key."""
+    """Return all providers that have a usable API key or stored token."""
     _load_dotenv()
     result: List[ProviderInfo] = []
+    seen: set[str] = set()
+
     for pdef in _KNOWN_PROVIDERS:
         if pdef.id == "custom":
             if not os.environ.get("OPENAI_API_BASE"):
                 continue
         key = _find_key(pdef.env_vars)
-        if key:
+        auth_type = "api"
+        if not key:
+            key, auth_type = _find_token_store_key(pdef.id)
+        if key and pdef.id not in seen:
+            seen.add(pdef.id)
             result.append(
                 ProviderInfo(
                     provider_id=pdef.id,
@@ -292,6 +339,7 @@ def list_available_providers() -> List[ProviderInfo]:
                     model=pdef.default_model,
                     api_key=key,
                     api_base=pdef.api_base,
+                    auth_type=auth_type,
                 )
             )
     return result

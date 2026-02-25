@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pymolcode"
-version = "0.1.0"
+version = "0.2.0"
 description = "LLM-Enhanced Molecular Visualization Platform for Drug Discovery"
 readme = "README.md"
 license = {text = "MIT"}
@@ -20,9 +20,12 @@ keywords = [
     "pymol",
     "mcp",
     "structure-based-design",
+    "oauth",
+    "hephaestus",
+    "ultrawork",
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
@@ -38,27 +41,30 @@ dependencies = [
     "pydantic-settings>=2.0.0",
     "anyio>=4.0.0",
     "pyyaml>=6.0.0",
-    
+
     # MCP Protocol
     "mcp>=1.0.0",
-    
+
     # LLM Abstraction
     "litellm>=1.0.0",
-    
-    # TUI
+
+    # CLI
     "click>=8.1.0",
     "textual>=0.47.0",
     "rich>=13.0.0",
-    
+
     # Scientific
     "rdkit>=2023.9.0",
     "biopython>=1.83",
     "numpy>=1.26.0",
     "pandas>=2.1.0",
-    
+
     # Infrastructure
     "structlog>=24.0.0",
     "httpx>=0.27.0",
+
+    # Authentication
+    "pyjwt>=2.9.0",
 ]
 
 [project.optional-dependencies]
@@ -152,6 +158,7 @@ markers = [
     "skip_pymol: requires --run-pymol to run",
     "bridge_integration: bridge integration smoke tests",
     "requires_py311: requires Python 3.11+",
+    "auth: authentication tests",
 ]
 
 [tool.coverage.run]

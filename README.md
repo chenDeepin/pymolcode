@@ -11,9 +11,12 @@
 
 - 🤖 **Conversational Molecular Visualization** - Natural language control of PyMOL
 - 🧠 **Persistent Memory System** - Agent learns from mistakes and remembers preferences across sessions
+- ⚡ **Hephaestus Orchestrator** - Autonomous deep work with two-stage review (spec + quality)
+- 🔐 **OAuth Authentication** - Secure login for OpenAI, Google, GitHub Copilot, Anthropic
+- 🚀 **Ultrawork Command** - One-command agentic workflow execution
 - 🔬 **Automated Drug Discovery Workflows** - Agent-driven structure-based design
 - 💻 **Dual Interface** - CLI and PyMOL GUI plugin
-- 🔧 **Extensible Skill System** - Drug discovery-specific agent skills
+- 🔧 **Extensible Skill System** - Drug discovery-specific agent skills with Oh-My-OpenCode integration
 - 🔌 **MCP Integration** - Model Context Protocol for standardized tool interoperability
 - 🛡️ **Safety Controls** - Policy-guarded actions for scientific reproducibility
 
@@ -27,7 +30,7 @@
 │  (Headless)    │ (PyMOL Plugin)  │   (Scripting API)       │
 ├────────────────┴─────────────────┴─────────────────────────┤
 │                    Application Core                         │
-│  Session │ Agent │ Skills │ Bridge │ Memory │ Protocol     │
+│  Session │ Agent │ Skills │ Bridge │ Memory │ Auth │ Hephaestus │
 ├─────────────────────────────────────────────────────────────┤
 │          MCP Hub              │      Molecular Bridge       │
 │  MCP Server │ MCP Client      │  PyMOL Adapter │ Services  │
@@ -61,11 +64,57 @@ source .venv/bin/activate  # or `.venv\Scripts\activate` on Windows
 # Install dependencies
 uv pip install -e ".[all]"
 
+# Install PyMOL (required for GUI mode)
+pip install pymol-open-source
+
 # (Optional) Verify installation
 pymolcode --version
 ```
 
+### OAuth Configuration (Optional)
+
+For OAuth-based authentication with LLM providers, set these environment variables:
+
+```bash
+# OpenAI (ChatGPT Plus/Pro device code flow)
+export OPENAI_CLIENT_ID="your-client-id"
+
+# Google Gemini (OAuth device code flow)
+export GOOGLE_CLIENT_ID="your-client-id"
+export GOOGLE_CLIENT_SECRET="your-client-secret"
+
+# GitHub Copilot (device code flow)
+export GITHUB_COPILOT_CLIENT_ID="your-client-id"
+```
+
+> **Note**: OAuth is optional. You can also use API keys directly with `pymolcode auth login <provider>`.
+
+> **Security**: Never commit client IDs or secrets to version control. For GitHub upload, all OAuth client IDs are read from environment variables.
+
 ## Usage
+
+### Authentication
+
+```bash
+# Login with OAuth (recommended)
+pymolcode auth login openai       # Device code flow for ChatGPT Plus/Pro
+pymolcode auth login google       # OAuth for Gemini
+pymolcode auth login github-copilot  # GitHub Copilot
+pymolcode auth login anthropic    # API key for Claude
+
+# List stored credentials
+pymolcode auth list
+
+# Remove credentials
+pymolcode auth logout openai
+```
+
+### Agentic Workflows
+
+```bash
+# One-command workflow execution
+pymolcode ultrawork "analyze TEAD1 binding pocket and dock 10 ligands"
+```
 
 ### PyMOL GUI Plugin
 
@@ -95,18 +144,6 @@ npm run build
 # See node/src/bridge-client.ts
 ```
 
-### PyMOL Plugin Installation
-
-```python
-# In PyMOL, install the plugin manually:
-# Plugin → Plugin Manager → Install New Plugin → Select python/pymol/panel.py
-
-# Then use from PyMOL command line:
-pymolcode> load PDB 1UBQ and show as cartoon
-pymolcode> color by secondary structure
-pymolcode> find binding pockets
-```
-
 ## Example Usage
 
 ### Conversational Visualization
@@ -125,27 +162,30 @@ at residues YAP F96, P97, P98 and TEAD1 L381, Y382, K383.
 Would you like me to analyze the interaction types or dock a potential inhibitor?
 ```
 
-### Automated Workflow
+### Ultrawork Example
 
-```
-User: Run docking for these 10 ligands against the TEAD1 pocket
+```bash
+$ pymolcode ultrawork "Load 3KYS, identify binding pockets, and generate a report"
 
-pymolcode: I'll execute the docking_batch skill. This involves:
+  pymolcode ultrawork
+  Goal: Load 3KYS, identify binding pockets, and generate a report
 
-1. Preparing the protein structure
-2. Generating ligand conformers  
-3. Running molecular docking
-4. Analyzing interactions
-5. Ranking by binding score
+  Hephaestus crafting plan...
+  4 steps identified:
 
-[Workflow executes with progress updates]
+    1. [structure] Load PDB structure 3KYS
+    2. [analysis] Identify binding pockets using Fpocket
+    3. [analysis] Calculate pocket druggability scores
+    4. [visualization] Generate pocket visualization and report
 
-Results: Top 3 hits identified:
-- ligand_03: ΔG = -9.2 kcal/mol, key H-bonds with Y422, F393
-- ligand_07: ΔG = -8.8 kcal/mol, hydrophobic contacts in lipophilic pocket
-- ligand_01: ΔG = -8.5 kcal/mol, potential covalent warhead positioning
+  Forging...
 
-Visualizations saved to ./artifacts/docking_run_001/
+  Results: 4/4 completed
+
+    [+] Load PDB structure 3KYS
+    [+] Identify binding pockets using Fpocket
+    [+] Calculate pocket druggability scores
+    [+] Generate pocket visualization and report
 ```
 
 ## Skills
@@ -166,29 +206,53 @@ Built-in drug discovery skills:
 ## Configuration
 
 ```yaml
-# ~/.config/pymolcode/config.yaml
-
-llm:
-  provider: anthropic  # anthropic, openai, gemini, ollama
-  model: claude-3-opus-20240229
-  api_key: ${ANTHROPIC_API_KEY}
-
-mcp:
-  servers:
-    - name: drugclip
-      command: python -m drugclip_mcp_server
-    - name: rdkit
-      command: python -m rdkit_mcp_server
-
-policies:
-  destructive_actions: require_confirmation
-  external_calls: log_and_notify
-  max_concurrent_tasks: 4
+# ~/.pymolcode/config.json
+{
+  "llm": {
+    "provider": "anthropic",
+    "model": "claude-opus-4-6",
+    "auth_type": "oauth"
+  },
+  "auth": {
+    "providers": {
+      "anthropic": {"type": "oauth", "refresh_on_expiry": true},
+      "openai": {"type": "oauth"},
+      "google": {"type": "oauth"}
+    }
+  },
+  "agents": {
+    "hephaestus": {
+      "model": "claude-opus-4-6",
+      "parallel_limit": 5
+    }
+  },
+  "skills": {
+    "discovery_sources": [
+      "local://~/.pymolcode/skills",
+      "omo://code-yeongyu/oh-my-opencode"
+    ]
+  }
+}
 ```
+
+## Hephaestus Orchestrator
+
+Hephaestus is the discipline orchestrator for autonomous deep work:
+
+- **Planning**: Decomposes goals into concrete implementation steps
+- **Delegation**: Dispatches tasks to category-specific specialists
+- **Review Gates**: Two-stage review (spec compliance + code quality)
+- **Completion Enforcement**: Drives all tasks to completion
+
+**Preferred Models**:
+- Claude Opus 4.6 / 4.5
+- GPT-5.3 / 5.2 Codex
+- GLM-5 (Zhipu AI)
+- Kimi K2.5
 
 ## Memory System
 
-PymolCode includes a persistent memory system that allows the LLM agent to learn from mistakes and remember preferences across sessions. The memory system uses YAML files for human-readability and easy manual inspection.
+PymolCode includes a persistent memory system that allows the LLM agent to learn from mistakes and remember preferences across sessions.
 
 ### Memory Files
 
@@ -200,41 +264,18 @@ memory/
 └── YYYY-MM-DD.yaml     # Daily session notes
 ```
 
-### Memory Categories
-
-- **Preferences**: User's preferred workflows, visualization styles, naming conventions
-- **Lessons**: Documented mistakes with corrective actions (e.g., "Always verify PyMOL command success")
-- **Knowledge**: Domain expertise accumulated over time (binding site patterns, common issues)
-- **Active Tasks**: Current session focus and priorities
-
-### Agent Identity
-
-The agent's core identity and behavioral guidelines are defined in [SOUL.md](./SOUL.md), which establishes:
-- Core values (accuracy, verification, transparency)
-- Critical rules (never report success without verification)
-- Behavioral guidelines
-
 ### Artifact Organization
 
-Generated artifacts are organized in two locations:
-
-**Project-local** (for session outputs):
-```
-.pymolcode_artifacts/
-├── screenshots/        # PNG visualization exports
-├── structures/         # PDB/CIF molecular structures
-└── reports/            # Generated analysis reports
-```
-
-**Global** (for cached data, configurable via `~/.pymolcode/config.json`):
 ```
 ~/.pymolcode/
+├── auth.json           # OAuth tokens (0o600 permissions)
 ├── artifacts/
 │   ├── pdb/            # Downloaded PDB structures (cached)
 │   ├── screenshots/    # Default screenshot location
 │   └── scripts/        # Generated scripts
 ├── sessions/           # Saved session states
-└── plugins/            # Installed plugins
+├── plugins/            # Installed plugins
+└── skills/             # User-installed skills
 ```
 
 ## Development
@@ -246,26 +287,24 @@ pymolcode/
 ├── python/              # Main Python package
 │   ├── cli.py          # CLI entry point
 │   ├── agent/          # LLM agent orchestration
+│   ├── auth/           # OAuth authentication
 │   ├── bridge/         # JSON-RPC bridge server
 │   ├── pymol/          # PyMOL integration
 │   ├── session/        # Session management
-│   ├── skill/          # Skill registry
-│   ├── protocol/       # JSON-RPC protocol
-│   ├── persistence/    # State persistence
+│   ├── skill/          # Skill registry & bridge
+│   ├── workflow/       # Ultrawork command
+│   ├── validation/     # Hash validation
 │   ├── memory/         # Persistent memory system
 │   └── plugins/        # Plugin loader
 ├── node/               # TypeScript bridge client
 ├── launcher/           # Bridge orchestrator
 ├── docs/               # Documentation
 ├── memory/             # YAML memory files
-├── skills/             # Reference skills (not project code)
-├── .pymolcode_artifacts/  # Generated artifacts (PNG, PDB, etc.)
-└── tests/              # Test suites (not in git)
+├── skills/             # Reference skills (10 categories)
+└── tests/              # Test suites
 ```
 
 ### Running Tests
-
-> **Note**: The `tests/` directory is not included in the repository. Create tests locally for development.
 
 ```bash
 # Unit tests
@@ -296,9 +335,6 @@ mypy python/           # Type check
 | [MCP Integration](./docs/mcp.md) | External tool integration |
 | [Memory System](./docs/memory.md) | Persistent agent memory |
 | [Headless Rendering](./docs/headless-rendering.md) | Running without display |
-| [External MCP Servers](./docs/external-mcp-servers.md) | DrugCLIP, RDKit (planned) |
-| [Documentation Index](./docs/index.md) | All documentation |
-| [Skills Sources](./skills/SOURCES.md) | Skills attribution & licenses |
 | [SOUL.md](./SOUL.md) | Agent identity & behavioral guidelines |
 | [AGENTS.md](./AGENTS.md) | AI agent context |
 
@@ -317,7 +353,8 @@ MIT License - see [LICENSE](./LICENSE) for details.
 ## Acknowledgments
 
 - [PyMOL](https://github.com/schrodinger/pymol-open-source) - Molecular visualization foundation
-- [OpenCode](https://github.com/opencode-ai/opencode) - LLM agent patterns
+- [OpenCode](https://github.com/sst/opencode) - LLM agent patterns
+- [oh-my-opencode](https://github.com/code-yeongyu/oh-my-opencode) - Hephaestus orchestrator patterns
 - [MCP](https://modelcontextprotocol.io) - Tool integration protocol
 - [pymol-mcp](https://github.com/vrtejus/pymol-mcp) - MCP integration reference
 - [ChatMOL](https://github.com/ChatMol/ChatMol) - LLM interface patterns

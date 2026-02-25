@@ -103,7 +103,8 @@ Thumbs.db
 # Cursor IDE
 .cursor/
 
-# Sisyphus
+# Hephaestus (renamed from Sisyphus)
+.hephaestus/
 .sisyphus/
 
 # Memory system - track core files, exclude daily sessions
@@ -112,6 +113,9 @@ memory/
 !memory/lessons.yaml
 !memory/now.yaml
 !memory/.gitkeep
+
+# Auth tokens (sensitive)
+.pymolcode/auth.json
 
 # Node
 node_modules/
