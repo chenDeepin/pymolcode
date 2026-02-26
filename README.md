@@ -144,50 +144,6 @@ npm run build
 # See node/src/bridge-client.ts
 ```
 
-## Example Usage
-
-### Conversational Visualization
-
-```
-User: Load the TEAD1-YAP complex (PDB 3KYS) and highlight the interface
-
-pymolcode: I'll load the structure and identify the protein-protein interface.
-
-[Loads 3KYS, detects interface residues, applies stick representation]
-
-Done! I've loaded the TEAD1-YAP complex and highlighted 45 interface residues
-in red (YAP) and blue (TEAD1). The interface spans ~850 Å² with key contacts
-at residues YAP F96, P97, P98 and TEAD1 L381, Y382, K383.
-
-Would you like me to analyze the interaction types or dock a potential inhibitor?
-```
-
-### Ultrawork Example
-
-```bash
-$ pymolcode ultrawork "Load 3KYS, identify binding pockets, and generate a report"
-
-  pymolcode ultrawork
-  Goal: Load 3KYS, identify binding pockets, and generate a report
-
-  Hephaestus crafting plan...
-  4 steps identified:
-
-    1. [structure] Load PDB structure 3KYS
-    2. [analysis] Identify binding pockets using Fpocket
-    3. [analysis] Calculate pocket druggability scores
-    4. [visualization] Generate pocket visualization and report
-
-  Forging...
-
-  Results: 4/4 completed
-
-    [+] Load PDB structure 3KYS
-    [+] Identify binding pockets using Fpocket
-    [+] Calculate pocket druggability scores
-    [+] Generate pocket visualization and report
-```
-
 ## Skills
 
 ### Built-in Skills
@@ -312,27 +268,6 @@ pymolcode/
 ├── memory/             # YAML memory files
 ├── skills/             # Reference skills (10 categories)
 └── tests/              # Test suites
-```
-
-### Running Tests
-
-```bash
-# Unit tests
-pytest tests/unit
-
-# Integration tests (requires PyMOL)
-pytest tests/integration
-
-# All tests with coverage
-pytest --cov=python tests/
-```
-
-### Code Quality
-
-```bash
-ruff check python/      # Lint
-ruff format python/     # Format
-mypy python/           # Type check
 ```
 
 ## Documentation
