@@ -23,4 +23,4 @@ jobs:
       - name: Dependency audit
         run: pip-audit || true
       - name: Static security scan
-        run: bandit -r src/pymolcode -q || true
+        run: bandit -r python -q || true
