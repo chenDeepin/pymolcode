@@ -154,6 +154,13 @@ class PymolcodePanel(QtWidgets.QDockWidget):
         self._pymol_cmd = cmd
         if self._agent:
             self._wire_tools()
+        
+        # Also wire to REST server if it's running
+        try:
+            from python.bridge.gui_rest_adapter import wire_gui_cmd
+            wire_gui_cmd(cmd)
+        except ImportError:
+            pass  # REST adapter not available
 
     # -- agent wiring -------------------------------------------------------
 
@@ -317,13 +324,20 @@ def init_plugin(app: Any = None) -> PymolcodePanel | None:
     qt_app = app or QtWidgets.QApplication.instance()
     if qt_app is None:
         return None
+    
 
     qt_app.setApplicationName("PymolCode")
     qt_app.setApplicationDisplayName("PymolCode")
 
     main_win = qt_app.activeWindow()
     if main_win is None:
-        return None
+        # Try to find the main window from topLevelWidgets
+        for w in qt_app.topLevelWidgets():
+            if w.windowTitle() and "PyMOL" in w.windowTitle():
+                main_win = w
+                break
+        if main_win is None:
+            return None
 
     main_win.setWindowTitle("PymolCode")
 
