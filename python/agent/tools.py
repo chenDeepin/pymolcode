@@ -5,10 +5,10 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
-from concurrent.futures import ThreadPoolExecutor
 
 if TYPE_CHECKING:
     from python.pymol.executor import CommandExecutor
@@ -391,7 +391,7 @@ class ToolRegistry:
 
     def _run_async_tool(self, coro):
         """Run an async tool coroutine, handling existing event loops.
-        
+
         When called from an async context (e.g., inside agent's _run_llm_loop),
         we can't use asyncio.run() because a loop is already running.
         This method runs the coroutine in a thread pool where no loop exists.

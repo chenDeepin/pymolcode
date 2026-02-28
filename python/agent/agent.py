@@ -199,6 +199,7 @@ Be precise with PyMOL selection syntax (e.g., 'chain A and resi 100-150').
 
         iteration = 0
         all_tool_results: list[ToolResult] = []
+        all_tool_names: list[str] = []  # Track tools called
 
         # Build litellm kwargs
         litellm_kw: dict[str, Any] = {
@@ -249,6 +250,7 @@ Be precise with PyMOL selection syntax (e.g., 'chain A and resi 100-150').
                     arguments=json.loads(tc.function.arguments),
                 )
                 agent_tool_calls.append(tool_call)
+                all_tool_names.append(tool_call.name)
                 LOGGER.info("Tool: %s  args: %s", tool_call.name, tool_call.arguments)
 
                 result_str = self._tools.execute(tool_call.name, tool_call.arguments)
@@ -279,8 +281,18 @@ Be precise with PyMOL selection syntax (e.g., 'chain A and resi 100-150').
                     }
                 )
 
+        # Generate summary of what was done
+        if all_tool_names:
+            tool_counts: dict[str, int] = {}
+            for name in all_tool_names:
+                tool_counts[name] = tool_counts.get(name, 0) + 1
+            summary_parts = [f"{name} ({count}x)" if count > 1 else name for name, count in tool_counts.items()]
+            summary = f"Operations completed: {', '.join(summary_parts)}."
+        else:
+            summary = "No operations were performed."
+
         return AgentMessage(
             role=AgentRole.ASSISTANT,
-            content="I've completed the requested operations.",
+            content=summary,
             tool_results=all_tool_results,
         ), all_tool_results
