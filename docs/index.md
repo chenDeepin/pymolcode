@@ -18,6 +18,12 @@
 | [Skills Guide](./skills.md) | Using and creating agent skills |
 | [Memory System](./memory.md) | Persistent agent memory and learning |
 
+## Extensions
+
+| Document | Description |
+|----------|-------------|
+| [OpenClaw Extension](./openclaw-extension.md) | Remote AI control via Telegram/Discord (optional) |
+
 ## Integration
 
 | Document | Description |
