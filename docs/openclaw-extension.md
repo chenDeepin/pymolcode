@@ -43,7 +43,7 @@ Before installing the extension, ensure you have:
 | Requirement | Version | How to Check |
 |-------------|---------|--------------|
 | OpenClaw | Latest | `openclaw --version` |
-| PymolCode | 2.0+ | `pymolcode --version` |
+| PymolCode | 0.2.0+ | `pymolcode --version` |
 | PyMOL | 2.5+ | `pymol --version` |
 | Git | Any | `git --version` |
 
