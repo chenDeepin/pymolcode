@@ -174,7 +174,7 @@ The `skills/` directory contains reference implementations from external project
 | `02-research/` | Drug discovery research (target search, trends) |
 | `03-ai-ml/` | Machine learning and AI model training |
 
-> **Note**: Reference skills are educational materials from [OpenCode](https://github.com/sst/opencode), [Orchestra Research](https://github.com/orchestra-research), and [Trail of Bits](https://github.com/trailofbits). See [skills/SOURCES.md](./skills/SOURCES.md) for attribution.
+> **Note**: Reference skills are educational materials from [OpenCode](https://github.com/anomalyco/opencode), [Orchestra Research](https://github.com/orchestra-research), and [Trail of Bits](https://github.com/trailofbits). See [skills/SOURCES.md](./skills/SOURCES.md) for attribution.
 
 ## Configuration
 
@@ -305,7 +305,7 @@ MIT License - see [LICENSE](./LICENSE) for details.
 ## Acknowledgments
 
 - [PyMOL](https://github.com/schrodinger/pymol-open-source) - Molecular visualization foundation
-- [OpenCode](https://github.com/sst/opencode) - LLM agent patterns
+- [OpenCode](https://github.com/anomalyco/opencode) - LLM agent patterns
 - [oh-my-opencode](https://github.com/code-yeongyu/oh-my-opencode) - Hephaestus orchestrator patterns
 - [MCP](https://modelcontextprotocol.io) - Tool integration protocol
 - [pymol-mcp](https://github.com/vrtejus/pymol-mcp) - MCP integration reference

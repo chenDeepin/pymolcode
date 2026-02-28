@@ -20,7 +20,7 @@ Many skills are derived from or inspired by [Claude Code](https://github.com/ant
 
 ### OpenCode Skills
 
-Skills adapted from [OpenCode](https://github.com/opencode-ai/opencode) agent patterns:
+Skills adapted from [OpenCode](https://github.com/anomalyco/opencode) agent patterns:
 - `00-core/` - Core utilities and planning
 - `17-agents/` - Agent orchestration patterns
 
