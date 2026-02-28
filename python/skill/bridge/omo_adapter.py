@@ -13,7 +13,6 @@ import json
 import logging
 import subprocess
 from pathlib import Path
-from typing import Any
 
 from python.skill.bridge.discovery import SkillMetadata, SkillSource
 

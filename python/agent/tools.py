@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from python.pymol.executor import CommandExecutor
@@ -20,9 +21,9 @@ class ToolSchema:
 
     name: str
     description: str
-    parameters: Dict[str, Any]
+    parameters: dict[str, Any]
 
-    def to_openai_format(self) -> Dict[str, Any]:
+    def to_openai_format(self) -> dict[str, Any]:
         """Convert to OpenAI function calling format."""
         return {
             "type": "function",
@@ -39,7 +40,7 @@ class Tool:
     """A callable tool that can be invoked by the LLM."""
 
     schema: ToolSchema
-    handler: Callable[[Dict[str, Any]], str]
+    handler: Callable[[dict[str, Any]], str]
     is_dangerous: bool = False
     requires_confirmation: bool = False
 
@@ -47,8 +48,8 @@ class Tool:
 class ToolRegistry:
     """Registry of available tools for the agent."""
 
-    def __init__(self, command_executor: Optional["CommandExecutor"] = None) -> None:
-        self._tools: Dict[str, Tool] = {}
+    def __init__(self, command_executor: CommandExecutor | None = None) -> None:
+        self._tools: dict[str, Tool] = {}
         self._command_executor = command_executor
         self._register_builtin_tools()
 
@@ -249,7 +250,7 @@ class ToolRegistry:
             )
         )
 
-    def _handle_pymol_align(self, args: Dict[str, Any]) -> str:
+    def _handle_pymol_align(self, args: dict[str, Any]) -> str:
         mobile = args.get("mobile", "")
         target = args.get("target", "")
         method = args.get("method", "ce")
@@ -330,19 +331,19 @@ class ToolRegistry:
         """Register a tool."""
         self._tools[tool.schema.name] = tool
 
-    def get(self, name: str) -> Optional[Tool]:
+    def get(self, name: str) -> Tool | None:
         """Get a tool by name."""
         return self._tools.get(name)
 
-    def list_tools(self) -> List[Tool]:
+    def list_tools(self) -> list[Tool]:
         """List all registered tools."""
         return list(self._tools.values())
 
-    def get_openai_tools(self) -> List[Dict[str, Any]]:
+    def get_openai_tools(self) -> list[dict[str, Any]]:
         """Get all tools in OpenAI function calling format."""
         return [tool.schema.to_openai_format() for tool in self._tools.values()]
 
-    def execute(self, name: str, arguments: Dict[str, Any]) -> str:
+    def execute(self, name: str, arguments: dict[str, Any]) -> str:
         """Execute a tool and return the result."""
         tool = self.get(name)
         if tool is None:
@@ -354,11 +355,11 @@ class ToolRegistry:
         except Exception as exc:
             return json.dumps({"error": f"Tool execution failed: {exc}"})
 
-    def set_command_executor(self, executor: "CommandExecutor") -> None:
+    def set_command_executor(self, executor: CommandExecutor) -> None:
         """Set the command executor for PyMOL operations."""
         self._command_executor = executor
 
-    def _execute_pymol_command(self, method: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _execute_pymol_command(self, method: str, params: dict[str, Any]) -> dict[str, Any]:
         """Execute a PyMOL command through the executor."""
         if self._command_executor is None:
             return {"ok": False, "error": "PyMOL executor not available"}
@@ -366,13 +367,13 @@ class ToolRegistry:
         command = json.dumps({"method": method, "params": params})
         return self._command_executor.execute(command)
 
-    def _handle_pymol_load(self, args: Dict[str, Any]) -> str:
+    def _handle_pymol_load(self, args: dict[str, Any]) -> str:
         source = args.get("source", "")
         name = args.get("name")
         result = self._execute_pymol_command("load_structure", {"source": source, "name": name})
         return json.dumps(result)
 
-    def _handle_pymol_show(self, args: Dict[str, Any]) -> str:
+    def _handle_pymol_show(self, args: dict[str, Any]) -> str:
         selection = args.get("selection", "all")
         representation = args.get("representation", "cartoon")
         color = args.get("color")
@@ -382,7 +383,7 @@ class ToolRegistry:
         )
         return json.dumps(result)
 
-    def _handle_pymol_color(self, args: Dict[str, Any]) -> str:
+    def _handle_pymol_color(self, args: dict[str, Any]) -> str:
         selection = args.get("selection", "all")
         color = args.get("color", "white")
         result = self._execute_pymol_command(
@@ -390,16 +391,16 @@ class ToolRegistry:
         )
         return json.dumps(result)
 
-    def _handle_pymol_zoom(self, args: Dict[str, Any]) -> str:
+    def _handle_pymol_zoom(self, args: dict[str, Any]) -> str:
         selection = args.get("selection", "all")
         result = self._execute_pymol_command("zoom", {"selection": selection})
         return json.dumps(result)
 
-    def _handle_pymol_list(self, args: Dict[str, Any]) -> str:
+    def _handle_pymol_list(self, args: dict[str, Any]) -> str:
         result = self._execute_pymol_command("list_objects", {})
         return json.dumps(result)
 
-    def _handle_pymol_screenshot(self, args: Dict[str, Any]) -> str:
+    def _handle_pymol_screenshot(self, args: dict[str, Any]) -> str:
         filename = args.get("filename", "screenshot.png")
         width = args.get("width", 1280)
         height = args.get("height", 720)
@@ -410,7 +411,7 @@ class ToolRegistry:
         )
         return json.dumps(result)
 
-    def _handle_python_exec(self, args: Dict[str, Any]) -> str:
+    def _handle_python_exec(self, args: dict[str, Any]) -> str:
         """Handle Python code execution through CommandExecutor."""
         code = args.get("code", "")
         if not code:
@@ -428,8 +429,8 @@ class ToolRegistry:
         Args:
             workspace_path: Base directory for memory storage
         """
-        from python.memory.tools import MemoryReadTool, MemoryWriteTool
         from python.memory.store import MemoryStore
+        from python.memory.tools import MemoryReadTool, MemoryWriteTool
 
         memory_path = workspace_path / "memory" / "MEMORY.md"
         memory_store = MemoryStore(workspace_path)

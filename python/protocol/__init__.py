@@ -13,7 +13,6 @@ from .errors import (
 )
 from .framing import parse_frame, parse_frames, parse_next_frame, write_frame
 
-
 __all__ = [
     "INTERNAL_ERROR",
     "INVALID_PARAMS",

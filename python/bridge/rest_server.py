@@ -5,11 +5,11 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 from aiohttp import web
 
-from python.bridge.handlers import BridgeHandlers, HandlerOutcome, JSONRPC_VERSION, JsonRpcError
+from python.bridge.handlers import JSONRPC_VERSION, BridgeHandlers, HandlerOutcome, JsonRpcError
 
 LOGGER = logging.getLogger("python.bridge.rest_server")
 
@@ -28,39 +28,39 @@ class RestServer:
         handlers: BridgeHandlers,
         host: str = "127.0.0.1",
         port: int = 9124,
-        token: Optional[str] = None,
+        token: str | None = None,
     ) -> None:
         self._handlers = handlers
         self._host = host
         self._port = port
         self._token = token
-        self._app: Optional[web.Application] = None
-        self._runner: Optional[web.AppRunner] = None
-        self._site: Optional[web.TCPSite] = None
-        self._shutdown_event: Optional[asyncio.Event] = None
+        self._app: web.Application | None = None
+        self._runner: web.AppRunner | None = None
+        self._site: web.TCPSite | None = None
+        self._shutdown_event: asyncio.Event | None = None
 
     async def start(self) -> None:
         """Start the REST server."""
         self._app = web.Application()
         self._app["rest_server"] = self
-        
+
         # Register routes
         self._app.router.add_post("/rpc", self._handle_rpc)
         self._app.router.add_get("/health", self._handle_health)
         self._app.router.add_get("/ws", self._handle_websocket)
-        
+
         # Add middleware for auth
         self._app.middlewares.append(self._auth_middleware)
-        
+
         # Setup runner
         self._runner = web.AppRunner(self._app)
         await self._runner.setup()
-        
+
         self._site = web.TCPSite(self._runner, self._host, self._port)
         await self._site.start()
-        
+
         self._shutdown_event = asyncio.Event()
-        
+
         LOGGER.info(
             "RestServer started on http://%s:%d (auth=%s)",
             self._host,
@@ -71,23 +71,23 @@ class RestServer:
     async def stop(self) -> None:
         """Stop the REST server gracefully."""
         LOGGER.info("RestServer stopping...")
-        
+
         if self._shutdown_event:
             self._shutdown_event.set()
-        
+
         if self._site:
             await self._site.stop()
             self._site = None
-        
+
         if self._runner:
             await self._runner.cleanup()
             self._runner = None
-        
+
         if self._app:
             await self._app.shutdown()
             await self._app.cleanup()
             self._app = None
-        
+
         LOGGER.info("RestServer stopped")
 
     @web.middleware
@@ -100,11 +100,11 @@ class RestServer:
         # Skip auth for health endpoint
         if request.path == "/health":
             return await handler(request)
-        
+
         # Skip auth if no token configured
         if not self._token:
             return await handler(request)
-        
+
         # Check Authorization header
         auth_header = request.headers.get("Authorization", "")
         if not auth_header.startswith("Bearer "):
@@ -112,14 +112,14 @@ class RestServer:
                 {"error": "Unauthorized", "message": "Missing or invalid Authorization header"},
                 status=401,
             )
-        
+
         provided_token = auth_header[7:]  # Remove "Bearer " prefix
         if provided_token != self._token:
             return web.json_response(
                 {"error": "Unauthorized", "message": "Invalid token"},
                 status=401,
             )
-        
+
         return await handler(request)
 
     async def _handle_rpc(self, request: web.Request) -> web.Response:
@@ -136,7 +136,7 @@ class RestServer:
                     f"Parse error: {exc}",
                     status=400,
                 )
-            
+
             # Validate JSON-RPC structure
             if not isinstance(payload, dict):
                 return self._jsonrpc_error(
@@ -145,9 +145,9 @@ class RestServer:
                     "Invalid Request: payload must be an object",
                     status=400,
                 )
-            
+
             request_id = payload.get("id")
-            
+
             # Check JSON-RPC version
             if payload.get("jsonrpc") != JSONRPC_VERSION:
                 return self._jsonrpc_error(
@@ -156,7 +156,7 @@ class RestServer:
                     "Invalid Request: missing or invalid jsonrpc version",
                     status=400,
                 )
-            
+
             method = payload.get("method")
             if not isinstance(method, str):
                 return self._jsonrpc_error(
@@ -165,9 +165,9 @@ class RestServer:
                     "Invalid Request: method must be a string",
                     status=400,
                 )
-            
+
             params = payload.get("params")
-            
+
             # Execute the method
             try:
                 outcome: HandlerOutcome = self._handlers.handle(method, params)
@@ -181,18 +181,18 @@ class RestServer:
                     f"Internal error: {exc}",
                     status=500,
                 )
-            
+
             # Check for shutdown request
             if outcome.should_shutdown:
                 asyncio.create_task(self._delayed_shutdown())
-            
+
             # Return success response
             return web.json_response({
                 "jsonrpc": JSONRPC_VERSION,
                 "id": request_id,
                 "result": outcome.result,
             })
-        
+
         except Exception as exc:
             LOGGER.exception("Unexpected error in RPC handler")
             return self._jsonrpc_error(None, -32603, f"Internal error: {exc}", status=500)
@@ -205,9 +205,9 @@ class RestServer:
         """Handle WebSocket connections (stub for future use)."""
         ws = web.WebSocketResponse()
         await ws.prepare(request)
-        
+
         LOGGER.info("WebSocket connection opened")
-        
+
         try:
             async for msg in ws:
                 if msg.type == web.WSMsgType.TEXT:
@@ -229,7 +229,7 @@ class RestServer:
                     LOGGER.error("WebSocket error: %s", ws.exception())
         finally:
             LOGGER.info("WebSocket connection closed")
-        
+
         return ws
 
     async def _delayed_shutdown(self) -> None:

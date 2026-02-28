@@ -11,8 +11,6 @@ Usage:
 from __future__ import annotations
 
 import logging
-import sys
-from pathlib import Path
 
 __all__ = ["run_ultrawork"]
 
@@ -27,7 +25,7 @@ async def run_ultrawork(prompt: str, *, max_iterations: int = 100) -> int:
     from python.agent.agent import Agent
     from python.agent.orchestrator import Hephaestus, TodoStatus
 
-    print(f"\n  pymolcode ultrawork")
+    print("\n  pymolcode ultrawork")
     print(f"  Goal: {prompt}\n")
 
     agent = Agent()

@@ -21,7 +21,7 @@ import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 __all__ = ["ProviderInfo", "resolve_provider", "list_available_providers"]
 
@@ -132,9 +132,9 @@ class ProviderInfo:
     api_base: str | None = None
     auth_type: str = "api"  # "api" or "oauth"
 
-    def to_litellm_kwargs(self) -> Dict[str, Any]:
+    def to_litellm_kwargs(self) -> dict[str, Any]:
         """Return kwargs for ``litellm.acompletion(...)``."""
-        kw: Dict[str, Any] = {
+        kw: dict[str, Any] = {
             "model": self.model,
             "api_key": self.api_key,
         }
@@ -175,7 +175,7 @@ def _load_dotenv(dotenv_path: Path | None = None) -> None:
             return
 
 
-def _load_config_file() -> Dict[str, Any]:
+def _load_config_file() -> dict[str, Any]:
     """Load ~/.pymolcode/config.json if it exists."""
     config_path = Path.home() / ".pymolcode" / "config.json"
     if config_path.is_file():
@@ -316,10 +316,10 @@ def resolve_provider(
     return None
 
 
-def list_available_providers() -> List[ProviderInfo]:
+def list_available_providers() -> list[ProviderInfo]:
     """Return all providers that have a usable API key or stored token."""
     _load_dotenv()
-    result: List[ProviderInfo] = []
+    result: list[ProviderInfo] = []
     seen: set[str] = set()
 
     for pdef in _KNOWN_PROVIDERS:

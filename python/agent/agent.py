@@ -6,9 +6,9 @@ import json
 import logging
 import uuid
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
+from python.agent.tools import ToolRegistry
 from python.agent.types import (
     AgentConfig,
     AgentMessage,
@@ -17,7 +17,6 @@ from python.agent.types import (
     ToolCall,
     ToolResult,
 )
-from python.agent.tools import ToolRegistry
 
 if TYPE_CHECKING:
     from python.memory.store import MemoryStore
@@ -34,7 +33,7 @@ class AgentResponse:
     session_id: str
     message: AgentMessage
     is_complete: bool = True
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: dict[str, Any] | None = None
 
 
 class Agent:
@@ -85,13 +84,13 @@ Be precise with PyMOL selection syntax (e.g., 'chain A and resi 100-150').
 
     def __init__(
         self,
-        config: Optional[AgentConfig] = None,
-        tool_registry: Optional[ToolRegistry] = None,
-        memory_store: Optional["MemoryStore"] = None,
+        config: AgentConfig | None = None,
+        tool_registry: ToolRegistry | None = None,
+        memory_store: MemoryStore | None = None,
     ) -> None:
         self._config = config or AgentConfig(system_prompt=self.DEFAULT_SYSTEM_PROMPT)
         self._tools = tool_registry or ToolRegistry()
-        self._sessions: Dict[str, ChatSession] = {}
+        self._sessions: dict[str, ChatSession] = {}
         self._provider_resolved = False
         self._memory_store = memory_store
 
@@ -104,19 +103,19 @@ Be precise with PyMOL selection syntax (e.g., 'chain A and resi 100-150').
         return self._tools
 
     @property
-    def memory_store(self) -> Optional["MemoryStore"]:
+    def memory_store(self) -> MemoryStore | None:
         return self._memory_store
 
-    def set_memory_store(self, store: "MemoryStore") -> None:
+    def set_memory_store(self, store: MemoryStore) -> None:
         self._memory_store = store
 
-    def create_session(self, metadata: Optional[Dict[str, Any]] = None) -> ChatSession:
+    def create_session(self, metadata: dict[str, Any] | None = None) -> ChatSession:
         session_id = str(uuid.uuid4())[:8]
         session = ChatSession(id=session_id, metadata=metadata or {})
         self._sessions[session_id] = session
         return session
 
-    def get_session(self, session_id: str) -> Optional[ChatSession]:
+    def get_session(self, session_id: str) -> ChatSession | None:
         return self._sessions.get(session_id)
 
     def set_tool_registry(self, registry: ToolRegistry) -> None:
@@ -151,7 +150,7 @@ Be precise with PyMOL selection syntax (e.g., 'chain A and resi 100-150').
     async def chat(
         self,
         message: str,
-        session_id: Optional[str] = None,
+        session_id: str | None = None,
     ) -> AgentResponse:
         self._resolve_provider()
 
@@ -176,8 +175,8 @@ Be precise with PyMOL selection syntax (e.g., 'chain A and resi 100-150').
             metadata={"tool_results_count": len(tool_results)},
         )
 
-    def _build_messages(self, session: ChatSession) -> List[Dict[str, Any]]:
-        messages: list[Dict[str, Any]] = []
+    def _build_messages(self, session: ChatSession) -> list[dict[str, Any]]:
+        messages: list[dict[str, Any]] = []
         system_prompt = self._config.system_prompt or self.DEFAULT_SYSTEM_PROMPT
 
         if self._memory_store:
@@ -194,15 +193,15 @@ Be precise with PyMOL selection syntax (e.g., 'chain A and resi 100-150').
 
     async def _run_llm_loop(
         self,
-        messages: List[Dict[str, Any]],
-    ) -> Tuple[AgentMessage, List[ToolResult]]:
+        messages: list[dict[str, Any]],
+    ) -> tuple[AgentMessage, list[ToolResult]]:
         import litellm
 
         iteration = 0
-        all_tool_results: List[ToolResult] = []
+        all_tool_results: list[ToolResult] = []
 
         # Build litellm kwargs
-        litellm_kw: Dict[str, Any] = {
+        litellm_kw: dict[str, Any] = {
             "model": self._config.model,
             "temperature": self._config.temperature,
             "max_tokens": self._config.max_tokens,
@@ -240,8 +239,8 @@ Be precise with PyMOL selection syntax (e.g., 'chain A and resi 100-150').
                     content=assistant_msg.content or "",
                 ), all_tool_results
 
-            agent_tool_calls: List[ToolCall] = []
-            iteration_results: List[ToolResult] = []
+            agent_tool_calls: list[ToolCall] = []
+            iteration_results: list[ToolResult] = []
 
             for tc in tool_calls:
                 tool_call = ToolCall(

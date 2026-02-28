@@ -10,7 +10,7 @@ import asyncio
 import logging
 import re
 import threading
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from pymol.Qt import QtCore, QtWidgets
 
@@ -154,7 +154,7 @@ class PymolcodePanel(QtWidgets.QDockWidget):
         self._pymol_cmd = cmd
         if self._agent:
             self._wire_tools()
-        
+
         # Also wire to REST server if it's running
         try:
             from python.bridge.gui_rest_adapter import wire_gui_cmd
@@ -168,8 +168,8 @@ class PymolcodePanel(QtWidgets.QDockWidget):
         if self._agent is not None:
             return
         from python.agent.agent import Agent
-        from python.agent.types import AgentConfig
         from python.agent.provider import resolve_provider
+        from python.agent.types import AgentConfig
 
         provider = resolve_provider()
         if provider is None:
@@ -324,7 +324,7 @@ def init_plugin(app: Any = None) -> PymolcodePanel | None:
     qt_app = app or QtWidgets.QApplication.instance()
     if qt_app is None:
         return None
-    
+
 
     qt_app.setApplicationName("PymolCode")
     qt_app.setApplicationDisplayName("PymolCode")

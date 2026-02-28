@@ -4,12 +4,12 @@ import json
 import logging
 import sys
 import time
-from contextlib import contextmanager
 from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import BinaryIO, TextIO, cast
 
-from python.bridge.handlers import BridgeHandlers, HandlerOutcome, JSONRPC_VERSION, JsonRpcError
-from python.protocol.errors import FramingError, PARSE_ERROR
+from python.bridge.handlers import JSONRPC_VERSION, BridgeHandlers, HandlerOutcome, JsonRpcError
+from python.protocol.errors import PARSE_ERROR, FramingError
 from python.protocol.framing import write_frame
 
 LOGGER = logging.getLogger("python.bridge.server")

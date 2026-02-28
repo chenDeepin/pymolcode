@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import cast
-
 
 CHAT_SCHEMA_VERSION = "1.0.0"
 Message = dict[str, object]
@@ -31,7 +30,7 @@ class ChatStore:
         payload: dict[str, object] = {
             "schema_version": self._schema_version,
             "session_id": session_id,
-            "saved_at": datetime.now(timezone.utc).isoformat(),
+            "saved_at": datetime.now(UTC).isoformat(),
             "messages": self._normalize_messages(messages),
         }
 

@@ -4,12 +4,12 @@ import importlib
 import os
 import queue
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass
 from types import ModuleType
-from typing import Callable, Final, Protocol, cast, final
+from typing import Final, Protocol, cast, final
 
 from python.pymol.executor import CommandExecutor
-
 
 JsonObject = dict[str, object]
 
@@ -224,7 +224,7 @@ class PyMOLRuntime:
             return self._pymol_factory()
 
         pymol2_module: ModuleType = importlib.import_module("pymol2")
-        pymol_cls = cast(type[_PyMOLInstance], getattr(pymol2_module, "PyMOL"))
+        pymol_cls = cast(type[_PyMOLInstance], pymol2_module.PyMOL)
         return pymol_cls()
 
     def _start_embedded_instance(self, pymol_instance: _PyMOLInstance) -> None:

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import json
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from concurrent import futures
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, cast, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 from python.protocol.spec import protocol_metadata
 
@@ -36,11 +36,11 @@ class JsonRpcError(Exception):
 class HandlerOutcome:
     """Result of handling a JSON-RPC request."""
 
-    result: Dict[str, Any]
+    result: dict[str, Any]
     should_shutdown: bool = False
 
 
-def _get_default_render_capability() -> Dict[str, Any]:
+def _get_default_render_capability() -> dict[str, Any]:
     """Get default render capability (lazy import)."""
     try:
         from python.pymol.runtime import PyMOLRuntime
@@ -59,25 +59,25 @@ class BridgeHandlers:
 
     def __init__(
         self,
-        capabilities: Optional[List[str]] = None,
+        capabilities: list[str] | None = None,
         protocol_version: str = PROTOCOL_VERSION,
-        render_capability: Optional[Dict[str, Any]] = None,
-        command_executor: Optional[Callable[[str], Dict[str, Any]]] = None,
-        agent: Optional[Any] = None,
-        skill_registry: Optional[Any] = None,
-        memory_store: Optional["MemoryStore"] = None,
-        workspace_path: Optional[Path] = None,
+        render_capability: dict[str, Any] | None = None,
+        command_executor: Callable[[str], dict[str, Any]] | None = None,
+        agent: Any | None = None,
+        skill_registry: Any | None = None,
+        memory_store: MemoryStore | None = None,
+        workspace_path: Path | None = None,
     ) -> None:
-        self._capabilities: List[str] = list(capabilities or DEFAULT_CAPABILITIES)
+        self._capabilities: list[str] = list(capabilities or DEFAULT_CAPABILITIES)
         self._protocol_version: str = protocol_version
-        self._render_capability: Dict[str, Any] = (
+        self._render_capability: dict[str, Any] = (
             render_capability or _get_default_render_capability()
         )
-        self._command_executor: Optional[Callable[[str], Dict[str, Any]]] = command_executor
+        self._command_executor: Callable[[str], dict[str, Any]] | None = command_executor
         self._agent = agent
         self._skill_registry = skill_registry
-        self._memory_store: Optional["MemoryStore"] = memory_store
-        self._workspace_path: Optional[Path] = workspace_path
+        self._memory_store: MemoryStore | None = memory_store
+        self._workspace_path: Path | None = workspace_path
 
         # Extend capabilities
         self._capabilities.extend(
@@ -104,16 +104,16 @@ class BridgeHandlers:
         """Set the skill registry."""
         self._skill_registry = registry
 
-    def set_memory_store(self, store: "MemoryStore") -> None:
+    def set_memory_store(self, store: MemoryStore) -> None:
         """Set the memory store."""
         self._memory_store = store
         if self._agent:
             self._agent.set_memory_store(store)
 
-    def initialize_memory(self, workspace_path: Path) -> "MemoryStore":
+    def initialize_memory(self, workspace_path: Path) -> MemoryStore:
         """Initialize memory system for the workspace."""
-        from python.memory.store import MemoryStore
         from python.agent.tools import register_memory_tools
+        from python.memory.store import MemoryStore
 
         self._workspace_path = workspace_path
         self._memory_store = MemoryStore(workspace_path)
@@ -130,7 +130,7 @@ class BridgeHandlers:
         if params is not None and not isinstance(params, dict):
             raise JsonRpcError(-32602, "Invalid params")
 
-        params_dict = cast(Dict[str, Any], params or {})
+        params_dict = cast(dict[str, Any], params or {})
 
         # Core methods
         if method == "initialize":
@@ -170,7 +170,7 @@ class BridgeHandlers:
 
         raise JsonRpcError(-32601, "Method not found")
 
-    def _handle_pymol_method(self, method: str, params: Dict[str, Any]) -> HandlerOutcome:
+    def _handle_pymol_method(self, method: str, params: dict[str, Any]) -> HandlerOutcome:
         """Handle pymol.* methods."""
         if self._command_executor is None:
             raise JsonRpcError(-32601, "Method not found: PyMOL executor not available")
@@ -196,7 +196,7 @@ class BridgeHandlers:
         result_map = cast(Mapping[str, Any], result)
         return HandlerOutcome(result={key: value for key, value in result_map.items()})
 
-    def _handle_agent_method(self, method: str, params: Dict[str, Any]) -> HandlerOutcome:
+    def _handle_agent_method(self, method: str, params: dict[str, Any]) -> HandlerOutcome:
         """Handle agent.* methods."""
         if self._agent is None:
             raise JsonRpcError(-32601, "Method not found: Agent not available")
@@ -210,7 +210,7 @@ class BridgeHandlers:
 
         raise JsonRpcError(-32601, f"Unknown agent method: {method}")
 
-    def _handle_agent_chat(self, params: Dict[str, Any]) -> HandlerOutcome:
+    def _handle_agent_chat(self, params: dict[str, Any]) -> HandlerOutcome:
         """Handle agent.chat method (synchronous wrapper for async agent)."""
         message = params.get("message", "")
         session_id = params.get("session_id")
@@ -242,7 +242,7 @@ class BridgeHandlers:
             }
         )
 
-    def _run_agent_chat_sync(self, message: str, session_id: Optional[str]) -> Any:
+    def _run_agent_chat_sync(self, message: str, session_id: str | None) -> Any:
         """Run agent chat in a synchronous context with a new event loop."""
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -266,7 +266,7 @@ class BridgeHandlers:
 
         return HandlerOutcome(result={"sessions": sessions})
 
-    def _handle_agent_get_session(self, params: Dict[str, Any]) -> HandlerOutcome:
+    def _handle_agent_get_session(self, params: dict[str, Any]) -> HandlerOutcome:
         """Handle agent.get_session method."""
         session_id = params.get("session_id")
         if not session_id:
@@ -288,7 +288,7 @@ class BridgeHandlers:
             }
         )
 
-    def _handle_skill_method(self, method: str, params: Dict[str, Any]) -> HandlerOutcome:
+    def _handle_skill_method(self, method: str, params: dict[str, Any]) -> HandlerOutcome:
         """Handle skill.* methods."""
         if self._skill_registry is None:
             raise JsonRpcError(-32601, "Method not found: Skill registry not available")
@@ -301,7 +301,7 @@ class BridgeHandlers:
 
         raise JsonRpcError(-32601, f"Unknown skill method: {method}")
 
-    def _handle_skill_execute(self, params: Dict[str, Any]) -> HandlerOutcome:
+    def _handle_skill_execute(self, params: dict[str, Any]) -> HandlerOutcome:
         """Handle skill.execute method."""
         skill_name = params.get("skill")
         skill_params = params.get("params", {})
@@ -348,7 +348,7 @@ class BridgeHandlers:
     def _run_skill_execute_sync(
         self,
         skill_name: str,
-        params: Dict[str, Any],
+        params: dict[str, Any],
         context: Any,
     ) -> Any:
         """Run skill execution in a synchronous context."""
@@ -361,7 +361,7 @@ class BridgeHandlers:
         finally:
             loop.close()
 
-    def _handle_session_method(self, method: str, params: Dict[str, Any]) -> HandlerOutcome:
+    def _handle_session_method(self, method: str, params: dict[str, Any]) -> HandlerOutcome:
         """Handle session.* methods."""
         if method == "session.save":
             return self._handle_session_save(params)
@@ -370,7 +370,7 @@ class BridgeHandlers:
 
         raise JsonRpcError(-32601, f"Unknown session method: {method}")
 
-    def _handle_session_save(self, params: Dict[str, Any]) -> HandlerOutcome:
+    def _handle_session_save(self, params: dict[str, Any]) -> HandlerOutcome:
         """Handle session.save method."""
         path = params.get("path", "session.json")
         return HandlerOutcome(
@@ -381,7 +381,7 @@ class BridgeHandlers:
             }
         )
 
-    def _handle_session_load(self, params: Dict[str, Any]) -> HandlerOutcome:
+    def _handle_session_load(self, params: dict[str, Any]) -> HandlerOutcome:
         """Handle session.load method."""
         path = params.get("path", "session.json")
         return HandlerOutcome(
@@ -392,7 +392,7 @@ class BridgeHandlers:
             }
         )
 
-    def _handle_memory_method(self, method: str, params: Dict[str, Any]) -> HandlerOutcome:
+    def _handle_memory_method(self, method: str, params: dict[str, Any]) -> HandlerOutcome:
         """Handle memory.* methods."""
         if method == "memory.initialize":
             return self._handle_memory_initialize(params)
@@ -403,7 +403,7 @@ class BridgeHandlers:
 
         raise JsonRpcError(-32601, f"Unknown memory method: {method}")
 
-    def _handle_memory_initialize(self, params: Dict[str, Any]) -> HandlerOutcome:
+    def _handle_memory_initialize(self, params: dict[str, Any]) -> HandlerOutcome:
         """Handle memory.initialize method."""
         workspace = params.get("workspace", ".")
         workspace_path = Path(workspace).resolve()
@@ -420,7 +420,7 @@ class BridgeHandlers:
         except Exception as exc:
             raise JsonRpcError(-32000, f"Memory initialization failed: {exc}")
 
-    def _handle_memory_read(self, params: Dict[str, Any]) -> HandlerOutcome:
+    def _handle_memory_read(self, params: dict[str, Any]) -> HandlerOutcome:
         """Handle memory.read method."""
         if self._memory_store is None:
             raise JsonRpcError(-32000, "Memory store not initialized")
@@ -451,7 +451,7 @@ class BridgeHandlers:
             }
         )
 
-    def _handle_memory_write(self, params: Dict[str, Any]) -> HandlerOutcome:
+    def _handle_memory_write(self, params: dict[str, Any]) -> HandlerOutcome:
         """Handle memory.write method."""
         if self._memory_store is None:
             raise JsonRpcError(-32000, "Memory store not initialized")

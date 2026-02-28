@@ -10,7 +10,6 @@ from typing import TypedDict, cast
 
 from .registry import PluginRegistry
 
-
 Handler = Callable[..., object]
 
 

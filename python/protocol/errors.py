@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+
 from .spec import JSONRPC_VERSION, SERVER_ERROR_MAX, SERVER_ERROR_MIN
 
 PARSE_ERROR = -32700

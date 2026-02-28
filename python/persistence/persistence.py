@@ -4,16 +4,16 @@ import importlib
 import json
 import os
 import shutil
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Protocol, cast, TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol, cast
 from uuid import uuid4
 
 from .chat_store import CHAT_SCHEMA_VERSION, ChatStore
 
 if TYPE_CHECKING:
-    from python.memory.store import MemoryStore
+    pass
 
 MANIFEST_SCHEMA_VERSION = "1.0.0"
 SCENE_FORMAT_VERSION = "1.0.0"
@@ -55,7 +55,7 @@ class SessionPersistence:
         final_dir = self._base_dir / safe_session_id
         staging_container = self._base_dir / ".staging" / f"{safe_session_id}-{uuid4().hex}"
         staging_session_dir = staging_container / safe_session_id
-        now_iso = datetime.now(timezone.utc).isoformat()
+        now_iso = datetime.now(UTC).isoformat()
 
         staging_session_dir.mkdir(parents=True, exist_ok=False)
 

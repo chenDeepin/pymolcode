@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class AgentRole(str, Enum):
@@ -23,7 +23,7 @@ class ToolCall:
 
     id: str
     name: str
-    arguments: Dict[str, Any]
+    arguments: dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -41,14 +41,14 @@ class AgentMessage:
 
     role: AgentRole
     content: str
-    tool_calls: List[ToolCall] = field(default_factory=list)
-    tool_results: List[ToolResult] = field(default_factory=list)
+    tool_calls: list[ToolCall] = field(default_factory=list)
+    tool_results: list[ToolResult] = field(default_factory=list)
     timestamp: datetime = field(default_factory=datetime.utcnow)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_litellm_format(self) -> Dict[str, Any]:
+    def to_litellm_format(self) -> dict[str, Any]:
         """Convert to LiteLLM message format."""
-        msg: Dict[str, Any] = {"role": self.role.value, "content": self.content}
+        msg: dict[str, Any] = {"role": self.role.value, "content": self.content}
         if self.tool_calls:
             msg["tool_calls"] = [
                 {
@@ -68,17 +68,17 @@ class ChatSession:
     """A chat session with message history."""
 
     id: str
-    messages: List[AgentMessage] = field(default_factory=list)
+    messages: list[AgentMessage] = field(default_factory=list)
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def add_message(self, message: AgentMessage) -> None:
         """Add a message to the session."""
         self.messages.append(message)
         self.updated_at = datetime.utcnow()
 
-    def get_context_for_llm(self, max_messages: int = 50) -> List[Dict[str, Any]]:
+    def get_context_for_llm(self, max_messages: int = 50) -> list[dict[str, Any]]:
         """Get message history in LiteLLM format."""
         recent = self.messages[-max_messages:] if len(self.messages) > max_messages else self.messages
         return [msg.to_litellm_format() for msg in recent]
@@ -98,12 +98,12 @@ class AgentConfig:
     timeout_seconds: float = 120.0
 
     # Model provider settings
-    api_base: Optional[str] = None
-    api_key: Optional[str] = None
+    api_base: str | None = None
+    api_key: str | None = None
 
-    def to_litellm_params(self) -> Dict[str, Any]:
+    def to_litellm_params(self) -> dict[str, Any]:
         """Convert to LiteLLM completion parameters."""
-        params: Dict[str, Any] = {
+        params: dict[str, Any] = {
             "model": self.model,
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,

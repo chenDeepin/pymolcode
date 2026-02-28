@@ -89,7 +89,7 @@ def _cmd_auth_list(args: argparse.Namespace) -> int:
 
     if not providers:
         print("No stored credentials.")
-        print(f"Run: pymolcode auth login <provider>")
+        print("Run: pymolcode auth login <provider>")
         print(f"Available: {', '.join(sorted(OAUTH_PROVIDERS))}")
         return 0
 
@@ -128,22 +128,22 @@ def _cmd_auth_logout(args: argparse.Namespace) -> int:
 def _cmd_serve(args: argparse.Namespace) -> int:
     """Start the REST API server."""
     import logging
-    
+
     # Configure logging
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
     )
-    
+
     if not args.rest:
         print("Error: Must specify --rest for REST server mode")
         print("Usage: pymolcode serve --rest [--host HOST] [--port PORT] [--token TOKEN]")
         return 1
-    
+
     from python.bridge.rest_adapter import run_rest_server_with_runtime
-    
+
     headless = not args.gui
-    
+
     try:
         asyncio.run(
             run_rest_server_with_runtime(
@@ -159,7 +159,7 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     except Exception as exc:
         print(f"Error: {exc}")
         return 1
-    
+
     return 0
 
 

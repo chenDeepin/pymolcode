@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-
 DEFAULT_SESSION_BASE_DIR = Path.home() / ".pymolcode"
 DEFAULT_PLUGINS_DIR = DEFAULT_SESSION_BASE_DIR / "plugins"
 DEFAULT_SESSIONS_DIR = DEFAULT_SESSION_BASE_DIR / "sessions"
@@ -113,7 +112,7 @@ def load_config(config_path: Path | None = None) -> SessionConfig:
 
     if effective_path.exists():
         try:
-            with open(effective_path, "r", encoding="utf-8") as f:
+            with open(effective_path, encoding="utf-8") as f:
                 data = json.load(f)
             config = SessionConfig.from_dict(data)
         except (json.JSONDecodeError, KeyError, ValueError):

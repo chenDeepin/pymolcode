@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import signal
-from typing import Optional
 
 from python.bridge.handlers import BridgeHandlers
 from python.bridge.rest_server import RestServer
@@ -17,7 +16,7 @@ def create_rest_server(
     handlers: BridgeHandlers,
     host: str = "127.0.0.1",
     port: int = 9124,
-    token: Optional[str] = None,
+    token: str | None = None,
 ) -> RestServer:
     """Create a RestServer instance with the given configuration.
 
@@ -42,7 +41,7 @@ async def run_rest_server(
     handlers: BridgeHandlers,
     host: str = "127.0.0.1",
     port: int = 9124,
-    token: Optional[str] = None,
+    token: str | None = None,
 ) -> None:
     """Run the REST server until SIGINT/SIGTERM.
 
@@ -56,15 +55,15 @@ async def run_rest_server(
         token: Optional Bearer token for authentication
     """
     server = create_rest_server(handlers, host, port, token)
-    
+
     # Setup signal handlers for graceful shutdown
     loop = asyncio.get_running_loop()
     shutdown_event = asyncio.Event()
-    
+
     def signal_handler() -> None:
         LOGGER.info("Received shutdown signal")
         shutdown_event.set()
-    
+
     # Register signal handlers
     for sig in (signal.SIGINT, signal.SIGTERM):
         try:
@@ -72,19 +71,19 @@ async def run_rest_server(
         except NotImplementedError:
             # Signal handlers not supported on Windows
             pass
-    
+
     try:
         await server.start()
-        
+
         LOGGER.info(
             "REST server running at %s",
             server.url,
         )
         LOGGER.info("Press Ctrl+C to stop")
-        
+
         # Wait for shutdown signal
         await shutdown_event.wait()
-        
+
     finally:
         # Cleanup signal handlers
         for sig in (signal.SIGINT, signal.SIGTERM):
@@ -92,7 +91,7 @@ async def run_rest_server(
                 loop.remove_signal_handler(sig)
             except (NotImplementedError, ValueError):
                 pass
-        
+
         await server.stop()
         LOGGER.info("REST server shutdown complete")
 
@@ -100,8 +99,8 @@ async def run_rest_server(
 async def run_rest_server_with_runtime(
     host: str = "127.0.0.1",
     port: int = 9124,
-    token: Optional[str] = None,
-    workspace: Optional[str] = None,
+    token: str | None = None,
+    workspace: str | None = None,
     headless: bool = True,
 ) -> None:
     """Run REST server with a PyMOL runtime.
@@ -121,28 +120,28 @@ async def run_rest_server_with_runtime(
         workspace: Optional workspace path for memory/sessions
     """
     from pathlib import Path
-    
+
     # Import PyMOL runtime
     try:
         from python.pymol.runtime import PyMOLRuntime
     except ImportError as exc:
         LOGGER.error("Failed to import PyMOLRuntime: %s", exc)
         raise RuntimeError("PyMOL runtime not available") from exc
-    
+
     # Start PyMOL runtime
     mode = "headless" if headless else "GUI"
     LOGGER.info(f"Starting PyMOL runtime ({mode})...")
     runtime = PyMOLRuntime(headless=headless)
-    
+
     try:
         runtime.start()
         LOGGER.info("PyMOL runtime started successfully")
-        
+
         # Create handlers with PyMOL executor
         handlers = BridgeHandlers(
             command_executor=runtime.execute,
         )
-        
+
         # Initialize memory if workspace provided
         if workspace:
             workspace_path = Path(workspace).resolve()
@@ -151,7 +150,7 @@ async def run_rest_server_with_runtime(
                 LOGGER.info("Memory initialized at %s", workspace_path)
             except Exception as exc:
                 LOGGER.warning("Failed to initialize memory: %s", exc)
-        
+
         # Run the REST server
         await run_rest_server(
             handlers=handlers,
@@ -159,7 +158,7 @@ async def run_rest_server_with_runtime(
             port=port,
             token=token,
         )
-    
+
     finally:
         # Cleanup PyMOL runtime
         LOGGER.info("Stopping PyMOL runtime...")

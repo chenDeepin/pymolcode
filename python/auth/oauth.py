@@ -10,7 +10,6 @@ import asyncio
 import base64
 import hashlib
 import logging
-import os
 import secrets
 import webbrowser
 from dataclasses import dataclass, field

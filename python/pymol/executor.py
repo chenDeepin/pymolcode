@@ -5,7 +5,6 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Final, Protocol, cast, final
 
-
 JsonObject = dict[str, object]
 
 
