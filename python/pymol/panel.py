@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any
 from pymol.Qt import QtCore, QtWidgets
 
 if TYPE_CHECKING:
-    from python.agent.agent import Agent, AgentResponse
+    from python.agent.agent import Agent
 
 __all__ = ["PymolcodePanel", "init_plugin"]
 
@@ -94,7 +94,64 @@ class PymolcodePanel(QtWidgets.QDockWidget):
         self._busy = False
         self._pymol_cmd: Any = None
 
+        # Persistent background event loop for async operations
+        self._bg_loop: asyncio.AbstractEventLoop | None = None
+        self._bg_thread: threading.Thread | None = None
+        self._loop_ready = threading.Event()
+
         self._build_ui()
+        self._start_background_loop()
+
+    def _start_background_loop(self) -> None:
+        """Start a persistent background event loop for async operations."""
+        def _run_loop() -> None:
+            self._bg_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self._bg_loop)
+            self._loop_ready.set()
+            self._bg_loop.run_forever()
+
+        self._bg_thread = threading.Thread(target=_run_loop, daemon=True, name="pymolcode-async")
+        self._bg_thread.start()
+        self._loop_ready.wait(timeout=5.0)
+        LOGGER.info("Background async loop started")
+
+    def _run_async(self, coro, callback, error_callback) -> None:
+        """Schedule a coroutine on the background loop and deliver results via callbacks."""
+        if self._bg_loop is None:
+            error_callback("Async loop not initialized")
+            return
+
+        async def _wrapped() -> None:
+            try:
+                result = await coro
+                QtCore.QMetaObject.invokeMethod(
+                    self,
+                    "_deliver_result",
+                    QtCore.Qt.QueuedConnection,
+                    QtCore.Q_ARG(object, result),
+                    QtCore.Q_ARG(object, callback),
+                    QtCore.Q_ARG(object, error_callback),
+                )
+            except Exception as exc:
+                QtCore.QMetaObject.invokeMethod(
+                    self,
+                    "_deliver_error",
+                    QtCore.Qt.QueuedConnection,
+                    QtCore.Q_ARG(str, str(exc)),
+                    QtCore.Q_ARG(object, error_callback),
+                )
+
+        asyncio.run_coroutine_threadsafe(_wrapped(), self._bg_loop)
+
+    @QtCore.Slot(object, object, object)
+    def _deliver_result(self, result: Any, callback: Any, _error_callback: Any) -> None:
+        if callback:
+            callback(result)
+
+    @QtCore.Slot(str, object)
+    def _deliver_error(self, msg: str, error_callback: Any) -> None:
+        if error_callback:
+            error_callback(msg)
 
     # -- UI construction ----------------------------------------------------
 
@@ -240,42 +297,20 @@ class PymolcodePanel(QtWidgets.QDockWidget):
         agent = self._agent
         sid = self._session_id
 
-        def _work() -> None:
-            loop = asyncio.new_event_loop()
-            try:
-                resp = loop.run_until_complete(agent.chat(text, sid))
-            except Exception as exc:
-                QtCore.QMetaObject.invokeMethod(
-                    self,
-                    "_on_error",
-                    QtCore.Qt.QueuedConnection,
-                    QtCore.Q_ARG(str, str(exc)),
-                )
-                return
-            finally:
-                import litellm
+        def _on_response(resp: Any) -> None:
+            self._session_id = resp.session_id
+            self._append("assistant", resp.message.content)
+            self._set_busy(False)
 
-                loop.run_until_complete(litellm.close_litellm_async_clients())
-                loop.close()
-            QtCore.QMetaObject.invokeMethod(
-                self,
-                "_on_response",
-                QtCore.Qt.QueuedConnection,
-                QtCore.Q_ARG(object, resp),
-            )
+        def _on_error(msg: str) -> None:
+            self._append("system", f"Error: {msg}")
+            self._set_busy(False)
 
-        threading.Thread(target=_work, daemon=True).start()
-
-    @QtCore.Slot(object)
-    def _on_response(self, resp: AgentResponse) -> None:
-        self._session_id = resp.session_id
-        self._append("assistant", resp.message.content)
-        self._set_busy(False)
-
-    @QtCore.Slot(str)
-    def _on_error(self, msg: str) -> None:
-        self._append("system", f"Error: {msg}")
-        self._set_busy(False)
+        self._run_async(
+            agent.chat(text, sid),
+            callback=_on_response,
+            error_callback=_on_error,
+        )
 
     # -- quick actions ------------------------------------------------------
 
@@ -329,22 +364,21 @@ def init_plugin(app: Any = None) -> PymolcodePanel | None:
     qt_app.setApplicationName("PymolCode")
     qt_app.setApplicationDisplayName("PymolCode")
 
-    from PyQt5.QtWidgets import QMainWindow, QDockWidget
-    
+    from PyQt5.QtWidgets import QMainWindow
+
     main_win = None
     # First try to find QMainWindow from topLevelWidgets
     for w in qt_app.topLevelWidgets():
-        if isinstance(w, QMainWindow) and w.windowTitle():
-            if "PyMOL" in w.windowTitle() or "PymolCode" in w.windowTitle():
+        if isinstance(w, QMainWindow) and w.windowTitle() and ("PyMOL" in w.windowTitle() or "PymolCode" in w.windowTitle()):
                 main_win = w
                 break
-    
+
     if main_win is None:
         # Fallback to active window if it's a QMainWindow
         active = qt_app.activeWindow()
         if isinstance(active, QMainWindow):
             main_win = active
-    
+
     if main_win is None:
         return None
 

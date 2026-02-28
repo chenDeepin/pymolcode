@@ -8,6 +8,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from concurrent.futures import ThreadPoolExecutor
 
 if TYPE_CHECKING:
     from python.pymol.executor import CommandExecutor
@@ -387,6 +388,25 @@ class ToolRegistry:
         result = self._command_executor.execute_python(code)
         return json.dumps(result)
 
+
+    def _run_async_tool(self, coro):
+        """Run an async tool coroutine, handling existing event loops.
+        
+        When called from an async context (e.g., inside agent's _run_llm_loop),
+        we can't use asyncio.run() because a loop is already running.
+        This method runs the coroutine in a thread pool where no loop exists.
+        """
+        try:
+            # Check if there's a running loop
+            asyncio.get_running_loop()
+            # If we get here, there IS a running loop - use thread pool
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(asyncio.run, coro)
+                return future.result(timeout=30)
+        except RuntimeError:
+            # No running loop - safe to use asyncio.run directly
+            return asyncio.run(coro)
+
     def register_memory_tools(self, workspace_path: Path) -> None:
         """Register memory tools for persistent knowledge storage.
 
@@ -414,7 +434,7 @@ class ToolRegistry:
                     description=read_tool.description,
                     parameters=read_tool.get_input_schema(),
                 ),
-                handler=lambda args: asyncio.run(read_tool.execute(**args)),
+                handler=lambda args, t=read_tool: self._run_async_tool(t.execute(**args)),
             )
         )
 
@@ -426,7 +446,7 @@ class ToolRegistry:
                     description=write_tool.description,
                     parameters=write_tool.get_input_schema(),
                 ),
-                handler=lambda args: asyncio.run(write_tool.execute(**args)),
+                handler=lambda args, t=write_tool: self._run_async_tool(t.execute(**args)),
             )
         )
 
