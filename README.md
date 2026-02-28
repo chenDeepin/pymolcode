@@ -151,16 +151,18 @@ npm run build
 
 ## Skills
 
-### Built-in Skills
+### Built-in Skills (Framework)
 
-Core skills implemented in pymolcode:
+Core skill frameworks for drug discovery workflows. These provide the API structure for agent orchestration:
 
-| Skill | Description |
-|-------|-------------|
-| `structure_analysis` | Analyze molecular structure and generate comprehensive reports |
-| `binding_site_analysis` | Identify and characterize potential binding sites in proteins |
-| `ligand_comparison` | Compare multiple ligand structures with alignment reports |
-| `trajectory_analysis` | Analyze molecular dynamics trajectories (RMSD, RMSF) |
+| Skill | Status | Description |
+|-------|--------|-------------|
+| `structure_analysis` | Framework | Basic structure queries (extensible for composition/secondary structure) |
+| `binding_site_analysis` | Framework | Placeholder for binding site characterization |
+| `ligand_comparison` | Framework | Alignment framework (requires PyMOL command integration) |
+| `trajectory_analysis` | Planned | Requires MDAnalysis or MDTraj integration |
+
+> 💡 These skills provide the orchestration layer. Full implementations planned for future releases.
 
 ### Reference Skills
 
