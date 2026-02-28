@@ -6,6 +6,7 @@ Adapted from opencode's auth.ts and mcp/auth.ts patterns.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import os
@@ -108,10 +109,8 @@ class TokenStore:
         data = {pid: info.to_dict() for pid, info in self._load().items()}
         tmp_path = self._auth_file.with_suffix(".tmp")
         tmp_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
-        try:
+        with contextlib.suppress(OSError):
             os.chmod(tmp_path, 0o600)
-        except OSError:
-            pass
         tmp_path.replace(self._auth_file)
 
     def get(self, provider_id: str) -> TokenInfo | None:

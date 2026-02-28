@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import getpass
 import os
 import sys
@@ -79,7 +80,7 @@ def _cmd_auth_login(args: argparse.Namespace) -> int:
         return 1
 
 
-def _cmd_auth_list(args: argparse.Namespace) -> int:
+def _cmd_auth_list(_args: argparse.Namespace) -> int:
     """List stored credentials."""
     from python.auth.providers import OAUTH_PROVIDERS
     from python.auth.token_store import TokenStore
@@ -352,10 +353,8 @@ def main(argv: list[str] | None = None) -> int:
 
         os.execvpe(sys.executable, pymol_argv, os.environ)
     finally:
-        try:
+        with contextlib.suppress(OSError):
             os.unlink(startup_path)
-        except OSError:
-            pass
 
     return 1
 

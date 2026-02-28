@@ -63,7 +63,7 @@ class HashValidator:
         self,
         line_number: int,
         expected_hash: str,
-        new_content: str,
+        _new_content: str = "",
     ) -> bool:
         """Validate that the line hasn't changed since snapshot."""
         current = self._state.get(line_number)
@@ -75,7 +75,7 @@ class HashValidator:
         self,
         line_number: int,
         expected_hash: str,
-        new_content: str,
+        new_content: str = "",
     ) -> bool:
         """Validate and apply an edit. Returns True on success."""
         if not self.validate_edit(line_number, expected_hash, new_content):

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +17,7 @@ __all__ = ["SkillDiscovery", "SkillMetadata", "SkillSource"]
 LOGGER = logging.getLogger("pymolcode.skill.discovery")
 
 
-class SkillSource(str, Enum):
+class SkillSource(StrEnum):
     """Origin of a discovered skill."""
 
     BUILTIN = "builtin"

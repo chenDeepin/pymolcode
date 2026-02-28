@@ -396,7 +396,7 @@ class ToolRegistry:
         result = self._execute_pymol_command("zoom", {"selection": selection})
         return json.dumps(result)
 
-    def _handle_pymol_list(self, args: dict[str, Any]) -> str:
+    def _handle_pymol_list(self, _args: dict[str, Any]) -> str:
         result = self._execute_pymol_command("list_objects", {})
         return json.dumps(result)
 

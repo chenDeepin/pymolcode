@@ -254,10 +254,7 @@ class SessionPersistence:
 
         metadata_obj = normalized.get("metadata")
         metadata: dict[str, object]
-        if isinstance(metadata_obj, dict):
-            metadata = cast(dict[str, object], metadata_obj)
-        else:
-            metadata = {}
+        metadata = cast(dict[str, object], metadata_obj) if isinstance(metadata_obj, dict) else {}
 
         schema_version = self._read_str(normalized.get("schema_version"))
         if schema_version is None:

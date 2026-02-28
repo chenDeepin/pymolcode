@@ -19,7 +19,7 @@ import asyncio
 import logging
 import uuid
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 __all__ = [
@@ -35,7 +35,7 @@ __all__ = [
 LOGGER = logging.getLogger("pymolcode.hephaestus")
 
 
-class AgentCategory(str, Enum):
+class AgentCategory(StrEnum):
     """Task categories that map to specialist agents."""
 
     STRUCTURE = "structure"        # Load/fetch PDB, protein structures
@@ -47,7 +47,7 @@ class AgentCategory(str, Enum):
     QUICK = "quick"                # Simple single-step tasks
 
 
-class TodoStatus(str, Enum):
+class TodoStatus(StrEnum):
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     REVIEWING = "reviewing"
@@ -55,7 +55,7 @@ class TodoStatus(str, Enum):
     FAILED = "failed"
 
 
-class ReviewStage(str, Enum):
+class ReviewStage(StrEnum):
     """Two-stage review process from subagent-driven-development."""
 
     SELF_REVIEW = "self_review"

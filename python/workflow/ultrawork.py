@@ -10,6 +10,7 @@ Usage:
 
 from __future__ import annotations
 
+import contextlib
 import logging
 
 __all__ = ["run_ultrawork"]
@@ -30,10 +31,8 @@ async def run_ultrawork(prompt: str, *, max_iterations: int = 100) -> int:
 
     agent = Agent()
 
-    try:
+    with contextlib.suppress(Exception):
         agent._resolve_provider()
-    except Exception:
-        pass
 
     if not agent.config.api_key:
         print("  No LLM provider configured.")

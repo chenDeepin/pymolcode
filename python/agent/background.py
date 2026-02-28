@@ -12,7 +12,7 @@ import logging
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any, TypeVar
 
 __all__ = ["AgentHandle", "BackgroundAgentManager"]
@@ -22,7 +22,7 @@ LOGGER = logging.getLogger("pymolcode.background")
 T = TypeVar("T")
 
 
-class HandleStatus(str, Enum):
+class HandleStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"

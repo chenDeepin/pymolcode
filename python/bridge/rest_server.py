@@ -197,7 +197,7 @@ class RestServer:
             LOGGER.exception("Unexpected error in RPC handler")
             return self._jsonrpc_error(None, -32603, f"Internal error: {exc}", status=500)
 
-    async def _handle_health(self, request: web.Request) -> web.Response:
+    async def _handle_health(self, _request: web.Request) -> web.Response:
         """Handle GET /health endpoint."""
         return web.json_response({"status": "ok"})
 

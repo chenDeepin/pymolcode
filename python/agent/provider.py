@@ -274,9 +274,8 @@ def resolve_provider(
 
     # 3. Scan env vars for known providers (priority order)
     for pdef in _KNOWN_PROVIDERS:
-        if pdef.id == "custom":
-            if not os.environ.get("OPENAI_API_BASE"):
-                continue
+        if pdef.id == "custom" and not os.environ.get("OPENAI_API_BASE"):
+            continue
         key = _find_key(pdef.env_vars)
         auth_type = "api"
         if key:
@@ -323,9 +322,8 @@ def list_available_providers() -> list[ProviderInfo]:
     seen: set[str] = set()
 
     for pdef in _KNOWN_PROVIDERS:
-        if pdef.id == "custom":
-            if not os.environ.get("OPENAI_API_BASE"):
-                continue
+        if pdef.id == "custom" and not os.environ.get("OPENAI_API_BASE"):
+            continue
         key = _find_key(pdef.env_vars)
         auth_type = "api"
         if not key:

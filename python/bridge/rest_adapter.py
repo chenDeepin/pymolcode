@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import signal
 
@@ -66,11 +67,8 @@ async def run_rest_server(
 
     # Register signal handlers
     for sig in (signal.SIGINT, signal.SIGTERM):
-        try:
+        with contextlib.suppress(NotImplementedError):
             loop.add_signal_handler(sig, signal_handler)
-        except NotImplementedError:
-            # Signal handlers not supported on Windows
-            pass
 
     try:
         await server.start()
@@ -87,10 +85,8 @@ async def run_rest_server(
     finally:
         # Cleanup signal handlers
         for sig in (signal.SIGINT, signal.SIGTERM):
-            try:
+            with contextlib.suppress(NotImplementedError, ValueError):
                 loop.remove_signal_handler(sig)
-            except (NotImplementedError, ValueError):
-                pass
 
         await server.stop()
         LOGGER.info("REST server shutdown complete")
@@ -104,7 +100,7 @@ async def run_rest_server_with_runtime(
     headless: bool = True,
 ) -> None:
     """Run REST server with a PyMOL runtime.
-    
+
     Args:
         headless: If True, run without GUI (default). If False, show PyMOL GUI.
 

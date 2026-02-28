@@ -8,12 +8,13 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import contextlib
 import hashlib
 import logging
 import secrets
 import webbrowser
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 import httpx
@@ -23,7 +24,7 @@ __all__ = ["AuthResult", "OAuthFlow", "OAuthManager"]
 LOGGER = logging.getLogger("pymolcode.auth")
 
 
-class OAuthFlow(str, Enum):
+class OAuthFlow(StrEnum):
     """Supported OAuth flow types."""
 
     DEVICE_CODE = "device_code"
@@ -214,10 +215,8 @@ class OAuthManager:
         if user_code:
             print(f"Enter code: {user_code}")
 
-        try:
+        with contextlib.suppress(Exception):
             webbrowser.open(verification_uri)
-        except Exception:
-            pass
 
         return await self._poll_for_token(
             provider_id, token_url, client_id, device_code, interval, expires_in
@@ -345,10 +344,8 @@ class OAuthManager:
         print(f"Enter code: {user_code}")
         print("(expires in 15 minutes)")
 
-        try:
+        with contextlib.suppress(Exception):
             webbrowser.open(verification_url)
-        except Exception:
-            pass
 
         return await self._poll_openai_for_code(
             provider_id, config, device_auth_id, user_code, interval
@@ -532,10 +529,8 @@ class OAuthManager:
         print(f"Enter code: {user_code}")
         print(f"(expires in {expires_in // 60} minutes)")
 
-        try:
+        with contextlib.suppress(Exception):
             webbrowser.open(verification_url)
-        except Exception:
-            pass
 
         return await self._poll_google_for_token(
             provider_id, token_url, client_id, client_secret, device_code, interval, expires_in
@@ -637,10 +632,8 @@ class OAuthManager:
         url = f"{auth_url}?{'&'.join(f'{k}={v}' for k, v in params.items())}"
         print(f"\nOpen this URL to authorize:\n{url}")
 
-        try:
+        with contextlib.suppress(Exception):
             webbrowser.open(url)
-        except Exception:
-            pass
 
         code = input("\nPaste the authorization code: ").strip()
         if not code:

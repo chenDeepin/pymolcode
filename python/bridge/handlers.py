@@ -194,7 +194,7 @@ class BridgeHandlers:
         if not isinstance(result, Mapping):
             raise JsonRpcError(-32000, "Command result must be an object")
         result_map = cast(Mapping[str, Any], result)
-        return HandlerOutcome(result={key: value for key, value in result_map.items()})
+        return HandlerOutcome(result=dict(result_map.items()))
 
     def _handle_agent_method(self, method: str, params: dict[str, Any]) -> HandlerOutcome:
         """Handle agent.* methods."""
@@ -228,9 +228,9 @@ class BridgeHandlers:
                 )
                 response = future.result(timeout=120)
         except futures.TimeoutError:
-            raise JsonRpcError(-32000, "Agent chat timed out")
+            raise JsonRpcError(-32000, "Agent chat timed out") from None
         except Exception as exc:
-            raise JsonRpcError(-32000, f"Agent chat failed: {exc}")
+            raise JsonRpcError(-32000, f"Agent chat failed: {exc}") from exc
 
         return HandlerOutcome(
             result={
@@ -331,9 +331,9 @@ class BridgeHandlers:
                 )
                 result = future.result(timeout=300)
         except futures.TimeoutError:
-            raise JsonRpcError(-32000, "Skill execution timed out")
+            raise JsonRpcError(-32000, "Skill execution timed out") from None
         except Exception as exc:
-            raise JsonRpcError(-32000, f"Skill execution failed: {exc}")
+            raise JsonRpcError(-32000, f"Skill execution failed: {exc}") from exc
 
         return HandlerOutcome(
             result={
@@ -418,7 +418,7 @@ class BridgeHandlers:
                 }
             )
         except Exception as exc:
-            raise JsonRpcError(-32000, f"Memory initialization failed: {exc}")
+            raise JsonRpcError(-32000, f"Memory initialization failed: {exc}") from exc
 
     def _handle_memory_read(self, params: dict[str, Any]) -> HandlerOutcome:
         """Handle memory.read method."""
@@ -435,13 +435,12 @@ class BridgeHandlers:
             include_todos=bool(section == "todos"),
         )
 
-        if tags or keywords:
-            if keywords and isinstance(keywords, list):
-                lessons = self._memory_store.search_lessons(query=" ".join(keywords), tags=tags)
-                if lessons:
-                    context += "\n\n## Search Results\n"
-                    for lesson in lessons[:limit]:
-                        context += f"- {lesson.get('lesson', '')}\n"
+        if (tags or keywords) and keywords and isinstance(keywords, list):
+            lessons = self._memory_store.search_lessons(query=" ".join(keywords), tags=tags)
+            if lessons:
+                context += "\n\n## Search Results\n"
+                for lesson in lessons[:limit]:
+                    context += f"- {lesson.get('lesson', '')}\n"
 
         return HandlerOutcome(
             result={
@@ -474,4 +473,4 @@ class BridgeHandlers:
                 }
             )
         except Exception as exc:
-            raise JsonRpcError(-32000, f"Memory write failed: {exc}")
+            raise JsonRpcError(-32000, f"Memory write failed: {exc}") from exc

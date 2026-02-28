@@ -33,7 +33,7 @@ class StructureAnalysisSkill(Skill):
     async def execute(
         self,
         params: dict[str, Any],
-        context: SkillContext,
+        context: SkillContext = None,
     ) -> SkillResult:
         object_name = params.get("object_name", "")
         include_binding_sites = params.get("include_binding_sites", True)
@@ -111,7 +111,7 @@ class BindingSiteAnalysisSkill(Skill):
     async def execute(
         self,
         params: dict[str, Any],
-        context: SkillContext,
+        context: SkillContext = None,
     ) -> SkillResult:
         object_name = params.get("object_name", "")
         ligand_name = params.get("ligand_name")
@@ -176,7 +176,7 @@ class LigandComparisonSkill(Skill):
     async def execute(
         self,
         params: dict[str, Any],
-        context: SkillContext,
+        context: SkillContext = None,
     ) -> SkillResult:
         reference = params.get("reference", "")
         mobile = params.get("mobile", "")
@@ -245,7 +245,7 @@ class TrajectoryAnalysisSkill(Skill):
     async def execute(
         self,
         params: dict[str, Any],
-        context: SkillContext,
+        _context: SkillContext = None,
     ) -> SkillResult:
         trajectory_file = params.get("trajectory_file", "")
         topology_file = params.get("topology_file", "")
