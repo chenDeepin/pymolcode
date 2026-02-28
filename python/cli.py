@@ -3,6 +3,7 @@
 Usage:
     pymolcode                       # launch PyMOL GUI + chat panel
     pymolcode --headless            # headless bridge server (no GUI)
+    pymolcode serve --rest          # start REST API server
     pymolcode auth login <provider> # authenticate with a provider
     pymolcode auth list             # list stored credentials
     pymolcode auth logout <provider># remove credentials
@@ -120,6 +121,49 @@ def _cmd_auth_logout(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Serve subcommand
+# ---------------------------------------------------------------------------
+
+
+def _cmd_serve(args: argparse.Namespace) -> int:
+    """Start the REST API server."""
+    import logging
+    
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
+    )
+    
+    if not args.rest:
+        print("Error: Must specify --rest for REST server mode")
+        print("Usage: pymolcode serve --rest [--host HOST] [--port PORT] [--token TOKEN]")
+        return 1
+    
+    from python.bridge.rest_adapter import run_rest_server_with_runtime
+    
+    headless = not args.gui
+    
+    try:
+        asyncio.run(
+            run_rest_server_with_runtime(
+                headless=headless,
+                host=args.host,
+                port=args.port,
+                token=args.token,
+                workspace=args.workspace,
+            )
+        )
+    except KeyboardInterrupt:
+        print("\nShutting down...")
+    except Exception as exc:
+        print(f"Error: {exc}")
+        return 1
+    
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # Ultrawork subcommand
 # ---------------------------------------------------------------------------
 
@@ -177,6 +221,41 @@ def main(argv: list[str] | None = None) -> int:
     logout_p.add_argument("provider", help="Provider ID")
     logout_p.set_defaults(func=_cmd_auth_logout)
 
+    # -- serve --------------------------------------------------------------
+    serve_parser = subparsers.add_parser("serve", help="Start API server")
+    serve_parser.add_argument(
+        "--rest",
+        action="store_true",
+        help="Start REST API server",
+    )
+    serve_parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Host address to bind to (default: 127.0.0.1)",
+    )
+    serve_parser.add_argument(
+        "--port",
+        type=int,
+        default=9124,
+        help="Port to listen on (default: 9124)",
+    )
+    serve_parser.add_argument(
+        "--token",
+        default=None,
+        help="Bearer token for authentication (optional)",
+    )
+    serve_parser.add_argument(
+        "--workspace",
+        default=None,
+        help="Workspace directory for memory and sessions (optional)",
+    )
+    serve_parser.add_argument(
+        "--gui",
+        action="store_true",
+        help="Start PyMOL with GUI (default: headless)",
+    )
+    serve_parser.set_defaults(func=_cmd_serve)
+
     # -- ultrawork ----------------------------------------------------------
     uw_parser = subparsers.add_parser("ultrawork", help="Run agentic workflow")
     uw_parser.add_argument("prompt", nargs="?", default="", help="Task description")
@@ -187,6 +266,11 @@ def main(argv: list[str] | None = None) -> int:
         "--headless",
         action="store_true",
         help="Run the JSON-RPC bridge server without PyMOL GUI.",
+    )
+    parser.add_argument(
+        "--with-rest",
+        action="store_true",
+        help="Start REST API server alongside GUI (port 9124).",
     )
 
     # Use parse_known_args to handle pymol_args flexibly
@@ -199,6 +283,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "auth":
         auth_parser.print_help()
+        return 1
+
+    if args.command == "serve":
+        serve_parser.print_help()
         return 1
 
     if args.headless:
@@ -216,9 +304,21 @@ def main(argv: list[str] | None = None) -> int:
     import tempfile
 
     splash_png = str(Path(root) / "python" / "pymol" / "assets" / "splash.png")
+    rest_code = ""
+    if args.with_rest:
+        rest_code = (
+            "# Start REST server\n"
+            "import logging\n"
+            "logging.basicConfig(level=logging.INFO)\n"
+            "from python.bridge.gui_rest_adapter import start_rest_thread\n"
+            "start_rest_thread(port=9124, host='127.0.0.1')\n"
+            "import time\n"
+            "time.sleep(0.5)\n"
+        )
     startup_code = (
         "import sys, os\n"
         f"sys.path.insert(0, {root!r})\n"
+        f"{rest_code}"
         "from python.pymol.panel import init_plugin\n"
         "from pymol import cmd\n"
         "cmd.set('internal_gui_width', 255)\n"
