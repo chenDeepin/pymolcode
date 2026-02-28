@@ -13,7 +13,7 @@ class StructureAnalysisSkill(Skill):
 
     name = "structure_analysis"
     description = "Analyze a molecular structure and generate a comprehensive report including composition, secondary structure, and binding sites."
-    version = "1.0.0"
+    version = "1.1.0"  # Bumped for PyMolWiki enhancements
     tags = ["structure", "analysis", "protein"]
     parameters = [
         SkillParameter(
@@ -28,6 +28,12 @@ class StructureAnalysisSkill(Skill):
             description="Include binding site prediction",
             default=True,
         ),
+        SkillParameter(
+            name="calculate_com",
+            type="boolean",
+            description="Calculate center of mass (using PyMolWiki get_com logic)",
+            default=True,
+        ),
     ]
 
     async def execute(
@@ -37,6 +43,7 @@ class StructureAnalysisSkill(Skill):
     ) -> SkillResult:
         object_name = params.get("object_name", "")
         include_binding_sites = params.get("include_binding_sites", True)
+        calculate_com = params.get("calculate_com", True)
 
         if not context.pymol_executor:
             return SkillResult(
@@ -65,10 +72,12 @@ class StructureAnalysisSkill(Skill):
             )
 
         # Get comprehensive structure composition using execute_python
+        # ENHANCED: Include center_of_mass.py logic from PyMolWiki
         composition_code = f'''
 import json
 cmd = local_vars.get("cmd")
 obj_name = "{object_name}"
+calculate_com = {str(calculate_com).lower()}
 
 result = {{"object_name": obj_name}}
 
@@ -119,6 +128,76 @@ try:
 except Exception as e:
     result["composition_error"] = str(e)
     result["residue_count"] = 0
+
+# ENHANCED: Center of Mass calculation (from PyMolWiki center_of_mass.py)
+# Author: Sean Law, Michigan State University
+if calculate_com:
+    try:
+        model = cmd.get_model(obj_name)
+        
+        # Simple center of mass (geometric center)
+        coords = [[atom.coord[0], atom.coord[1], atom.coord[2]] for atom in model.atom]
+        if coords:
+            simple_com = [
+                sum(c[0] for c in coords) / len(coords),
+                sum(c[1] for c in coords) / len(coords),
+                sum(c[2] for c in coords) / len(coords)
+            ]
+            result["center_of_mass"] = {{"x": simple_com[0], "y": simple_com[1], "z": simple_com[2]}}
+            result["center_of_mass_type"] = "geometric"
+        
+        # Mass-weighted center of mass
+        totmass = 0.0
+        x_mass, y_mass, z_mass = 0.0, 0.0, 0.0
+        
+        for atom in model.atom:
+            try:
+                m = atom.get_mass() if hasattr(atom, 'get_mass') else 12.0  # Default to carbon
+                x_mass += atom.coord[0] * m
+                y_mass += atom.coord[1] * m
+                z_mass += atom.coord[2] * m
+                totmass += m
+            except:
+                pass
+        
+        if totmass > 0:
+            result["center_of_mass_weighted"] = {{
+                "x": x_mass / totmass,
+                "y": y_mass / totmass,
+                "z": z_mass / totmass
+            }}
+            result["total_mass"] = totmass
+            result["center_of_mass_type"] = "mass_weighted"
+        
+        # Calculate bounding box
+        if coords:
+            xs = [c[0] for c in coords]
+            ys = [c[1] for c in coords]
+            zs = [c[2] for c in coords]
+            
+            result["bounding_box"] = {{
+                "min": {{"x": min(xs), "y": min(ys), "z": min(zs)}},
+                "max": {{"x": max(xs), "y": max(ys), "z": max(zs)}},
+                "center": {{
+                    "x": (min(xs) + max(xs)) / 2,
+                    "y": (min(ys) + max(ys)) / 2,
+                    "z": (min(zs) + max(zs)) / 2
+                }},
+                "dimensions": {{
+                    "x": max(xs) - min(xs),
+                    "y": max(ys) - min(ys),
+                    "z": max(zs) - min(zs)
+                }}
+            }}
+        
+        # Create a pseudoatom at center of mass for visualization
+        com_obj_name = cmd.get_unused_name(obj_name + "_COM", 0)
+        cmd.pseudoatom(com_obj_name, pos=[simple_com[0], simple_com[1], simple_com[2]])
+        cmd.show("spheres", com_obj_name)
+        result["com_object"] = com_obj_name
+        
+    except Exception as e:
+        result["center_of_mass_error"] = str(e)
 
 local_vars["_composition_result"] = json.dumps(result)
 '''
@@ -203,7 +282,7 @@ local_vars["_ss_result"] = json.dumps(result)
             ss_data = json.loads(ss_output.get("_ss_result", "{}")) if isinstance(ss_output.get("_ss_result"), str) else ss_output.get("_ss_result", {})
             analysis["secondary_structure"] = ss_data.get("secondary_structure", {})
 
-        # Binding site detection (simple cavity-based approach)
+        # Binding site detection (enhanced with findSurfaceResidues)
         analysis["binding_sites"] = []
         
         if include_binding_sites:
@@ -215,17 +294,34 @@ obj_name = "{object_name}"
 result = {{"binding_sites": []}}
 
 try:
-    # Simple cavity detection based on surface curvature and solvent accessibility
-    # First, ensure we have surface representation
-    cmd.show("surface", obj_name)
+    # ENHANCED: Use findSurfaceResidues logic from PyMolWiki
+    # http://pymolwiki.org/index.php/FindSurfaceResidues
     
-    # Find potential pockets using coordinate analysis
+    # Create a temporary object for surface analysis
+    tmpObj = cmd.get_unused_name("_tmp_surface")
+    cmd.create(tmpObj, "(" + obj_name + ") and polymer", zoom=0)
+    
+    # Set dot_solvent for SASA calculation
+    cmd.set("dot_solvent", 1, tmpObj)
+    
+    # Get solvent accessible surface area
+    cmd.get_area(selection=tmpObj, load_b=1)
+    
+    # Find atoms with exposed surface area > 2.5 A^2
+    cutoff = 2.5
+    cmd.select("_temp_exposed_atoms", tmpObj + " and b > " + str(cutoff))
+    
+    # Get unique residues from exposed atoms
+    exposed_residues = set()
+    cmd.iterate("_temp_exposed_atoms", "exposed_residues.add((chain,resv,resn))", space=locals())
+    
+    # Convert to list and sort
+    surface_residues = sorted(exposed_residues)
+    
+    # Calculate center of mass for reference
     model = cmd.get_model(obj_name)
-    
-    # Get center of mass for reference
     coords = [[atom.coord[0], atom.coord[1], atom.coord[2]] for atom in model.atom]
     
-    # Calculate bounding box
     if coords:
         xs = [c[0] for c in coords]
         ys = [c[1] for c in coords]
@@ -233,45 +329,30 @@ try:
         
         center = [(min(xs)+max(xs))/2, (min(ys)+max(ys))/2, (min(zs)+max(zs))/2]
         
-        # Find surface atoms (approximation: atoms at edges of protein)
-        # Use selection to find solvent-accessible regions
-        
-        # Create selection for potential binding site residues
-        # Based on finding clusters of exposed residues
-        
-        # Get solvent-accessible residues (simplified approach)
-        cmd.select("_temp_surface", f"byres ({{obj_name}} and not ({{obj_name}} within 4 of {{obj_name}}))")
-        
-        # Alternative: detect pockets by finding enclosed regions
-        # This is a simplified heuristic - real fpocket would be more sophisticated
-        
-        # Get residues with high SASA (solvent accessible surface area)
-        cmd.select("_temp_exposed", f"({{obj_name}} and not polymer.protein) or ({{obj_name}} within 3 of not {{obj_name}})")
-        
-        surface_count = cmd.count_atoms("_temp_surface")
-        exposed_count = cmd.count_atoms("_temp_exposed")
-        
-        # Find concave regions (potential binding sites)
-        # Use alpha shape or simply identify clusters
-        
+        # Find clusters of surface residues as potential binding sites
+        # This is a simplified heuristic
         result["binding_sites"] = [{{
             "id": 1,
-            "method": "surface_analysis",
-            "surface_atoms": surface_count,
-            "exposed_atoms": exposed_count,
+            "method": "findSurfaceResidues_enhanced",
+            "surface_residue_count": len(surface_residues),
+            "surface_residues": [
+                {{"chain": r[0], "resi": r[1], "resn": r[2]}} 
+                for r in surface_residues[:50]  # Limit output
+            ],
             "center": center,
-            "description": "Potential binding site detected from surface topology"
+            "cutoff_Å²": cutoff,
+            "description": "Surface residues detected using SASA-based method from PyMolWiki"
         }}]
-        
-        # Clean up temporary selections
-        cmd.delete("_temp_surface")
-        cmd.delete("_temp_exposed")
-        
+    
+    # Clean up temporary objects
+    cmd.delete(tmpObj)
+    cmd.delete("_temp_exposed_atoms")
+    
 except Exception as e:
     result["binding_sites"] = [{{
         "id": 0,
         "error": str(e),
-        "method": "surface_analysis_failed"
+        "method": "findSurfaceResidues_failed"
     }}]
 
 local_vars["_bs_result"] = json.dumps(result)
@@ -292,7 +373,7 @@ local_vars["_bs_result"] = json.dumps(result)
             skill_name=self.name,
             status=SkillStatus.COMPLETED,
             output=analysis,
-            metadata={"include_binding_sites": include_binding_sites},
+            metadata={"include_binding_sites": include_binding_sites, "calculate_com": calculate_com},
         )
 
 
@@ -301,7 +382,7 @@ class BindingSiteAnalysisSkill(Skill):
 
     name = "binding_site_analysis"
     description = "Identify and characterize potential binding sites in a protein structure."
-    version = "1.0.0"
+    version = "1.1.0"  # Bumped for PyMolWiki enhancements
     tags = ["binding-site", "drug-discovery", "docking"]
     parameters = [
         SkillParameter(
@@ -322,6 +403,12 @@ class BindingSiteAnalysisSkill(Skill):
             description="Radius around ligand for binding site definition (Angstroms)",
             default=5.0,
         ),
+        SkillParameter(
+            name="surface_cutoff",
+            type="number",
+            description="SASA cutoff for surface residue detection (Å²)",
+            default=2.5,
+        ),
     ]
 
     async def execute(
@@ -332,6 +419,7 @@ class BindingSiteAnalysisSkill(Skill):
         object_name = params.get("object_name", "")
         ligand_name = params.get("ligand_name")
         radius = params.get("radius", 5.0)
+        surface_cutoff = params.get("surface_cutoff", 2.5)
 
         if not context.pymol_executor:
             return SkillResult(
@@ -345,6 +433,7 @@ class BindingSiteAnalysisSkill(Skill):
             "ligand": ligand_name,
             "radius": radius,
             "binding_site_residues": [],
+            "surface_residues": [],  # NEW: From findSurfaceResidues
             "residue_count": 0,
             "analysis": "Binding site analysis",
         }
@@ -357,12 +446,14 @@ cmd = local_vars.get("cmd")
 protein = "{object_name}"
 ligand = "{ligand_name}"
 radius = {radius}
+surface_cutoff = {surface_cutoff}
 
 result = {{
     "protein": protein,
     "ligand": ligand,
     "radius": radius,
     "binding_site_residues": [],
+    "surface_residues": [],
     "residue_count": 0
 }}
 
@@ -409,14 +500,30 @@ try:
         result["residue_count"] = len(residues_list)
         
         # Calculate distances from each residue to ligand center
-        # Get ligand center of mass
+        # Get ligand center of mass using PyMolWiki get_com logic
         ligand_model = cmd.get_model(ligand)
         ligand_coords = [[a.coord[0], a.coord[1], a.coord[2]] for a in ligand_model.atom]
         if ligand_coords:
-            lig_com = [
-                sum(c[i] for c in ligand_coords) / len(ligand_coords)
-                for i in range(3)
-            ]
+            # Mass-weighted COM
+            totmass = 0.0
+            lig_com = [0.0, 0.0, 0.0]
+            for a in ligand_model.atom:
+                try:
+                    m = a.get_mass() if hasattr(a, 'get_mass') else 12.0
+                    lig_com[0] += a.coord[0] * m
+                    lig_com[1] += a.coord[1] * m
+                    lig_com[2] += a.coord[2] * m
+                    totmass += m
+                except:
+                    pass
+            
+            if totmass > 0:
+                lig_com = [lig_com[0]/totmass, lig_com[1]/totmass, lig_com[2]/totmass]
+            else:
+                lig_com = [
+                    sum(c[i] for c in ligand_coords) / len(ligand_coords)
+                    for i in range(3)
+                ]
             result["ligand_center"] = lig_com
             
             # Calculate min distance for each residue
@@ -430,7 +537,36 @@ try:
                 except:
                     pass
         
-        # Clean up
+        # ENHANCED: Also detect surface residues using findSurfaceResidues logic
+        # http://pymolwiki.org/index.php/FindSurfaceResidues
+        try:
+            tmpObj = cmd.get_unused_name("_tmp_surface_analysis")
+            cmd.create(tmpObj, "(" + protein + ") and polymer", zoom=0)
+            
+            cmd.set("dot_solvent", 1, tmpObj)
+            cmd.get_area(selection=tmpObj, load_b=1)
+            
+            # Find surface atoms (exposed > cutoff)
+            cmd.select("_temp_surf_atoms", tmpObj + " and b > " + str(surface_cutoff))
+            
+            # Get unique residues
+            exposed_residues = set()
+            cmd.iterate("_temp_surf_atoms", "exposed_residues.add((chain,resv,resn))", space=locals())
+            
+            result["surface_residues"] = [
+                {{"chain": r[0], "resi": r[1], "resn": r[2]}} 
+                for r in sorted(exposed_residues)
+            ]
+            result["surface_residue_count"] = len(exposed_residues)
+            
+            # Clean up
+            cmd.delete(tmpObj)
+            cmd.delete("_temp_surf_atoms")
+            
+        except Exception as e:
+            result["surface_detection_error"] = str(e)
+        
+        # Clean up binding site selection
         cmd.delete(selection_name)
         
         result["analysis"] = f"Found {{len(residues_list)}} residues within {{radius}}A of ligand {{ligand}}"
@@ -456,58 +592,106 @@ local_vars["_bsa_result"] = json.dumps(result)
                 result["error"] = str(analysis_result.get("error"))
         
         else:
-            # No ligand - try to detect pockets using geometric analysis
+            # No ligand - detect pockets using findSurfaceResidues (PyMolWiki enhanced)
             pocket_code = f'''
 import json
 cmd = local_vars.get("cmd")
 protein = "{object_name}"
+surface_cutoff = {surface_cutoff}
 
 result = {{
     "protein": protein,
     "ligand": None,
     "binding_site_residues": [],
+    "surface_residues": [],
     "potential_pockets": []
 }}
 
 try:
-    # Simple pocket detection without ligand
-    # Find cavities using coordinate clustering
+    # ENHANCED: Use findSurfaceResidues logic from PyMolWiki
+    # http://pymolwiki.org/index.php/FindSurfaceResidues
     
-    model = cmd.get_model(protein)
+    # Create temporary object for surface analysis
+    tmpObj = cmd.get_unused_name("_tmp_pocket_surface")
+    cmd.create(tmpObj, "(" + protein + ") and polymer", zoom=0)
     
-    # Get all atom coordinates
-    coords = [[atom.coord[0], atom.coord[1], atom.coord[2]] for atom in model.atom]
+    # Set up for SASA calculation
+    cmd.set("dot_solvent", 1, tmpObj)
+    cmd.get_area(selection=tmpObj, load_b=1)
     
-    if coords:
-        # Simple approach: find surface atoms and look for concave regions
-        # This is a heuristic - real pocket detection would use fpocket or similar
+    # Find surface atoms (exposed area > cutoff)
+    cmd.select("_temp_exposed", tmpObj + " and b > " + str(surface_cutoff))
+    
+    # Get unique exposed residues
+    exposed_residues = set()
+    cmd.iterate("_temp_exposed", "exposed_residues.add((chain,resv,resn))", space=locals())
+    
+    surface_residues_list = [
+        {{"chain": r[0], "resi": r[1], "resn": r[2], "exposed_area_class": "high"}} 
+        for r in sorted(exposed_residues)
+    ]
+    
+    result["binding_site_residues"] = surface_residues_list[:50]  # Limit output
+    result["surface_residues"] = surface_residues_list
+    result["residue_count"] = len(surface_residues_list)
+    result["analysis"] = f"Detected {{len(surface_residues_list)}} surface residues using PyMolWiki findSurfaceResidues method (cutoff={{surface_cutoff}} Å²)"
+    
+    # Find clusters of surface residues as potential binding pockets
+    # Get coordinates of surface residues for clustering
+    cmd.select("_temp_surface_res", "byres " + "_temp_exposed")
+    surface_model = cmd.get_model("_temp_surface_res")
+    
+    # Group by chain and find residue clusters
+    residue_coords = {{}}
+    for atom in surface_model.atom:
+        res_key = (atom.chain, atom.resi, atom.resn)
+        if res_key not in residue_coords:
+            residue_coords[res_key] = atom.coord
+    
+    # Simple clustering: find residues close together (potential pockets)
+    from itertools import combinations
+    import math
+    
+    pocket_clusters = []
+    residue_list = list(residue_coords.keys())
+    
+    # Find residues within 6Å of each other (potential pocket lining)
+    for i, r1 in enumerate(residue_list):
+        close_residues = [r1]
+        coord1 = residue_coords[r1]
         
-        # Create surface selection
-        cmd.show("surface", protein)
+        for j, r2 in enumerate(residue_list):
+            if i != j:
+                coord2 = residue_coords[r2]
+                dist = math.sqrt(sum((coord1[k] - coord2[k])**2 for k in range(3)))
+                if dist < 6.0:  # 6Å clustering threshold
+                    close_residues.append(r2)
         
-        # Find residues on the surface
-        cmd.select("_temp_surface_res", f"byres ({{protein}} within 2 of not {{protein}})")
-        surface_model = cmd.get_model("_temp_surface_res")
-        
-        # Group surface residues by proximity
-        surface_residues = {{}}
-        for atom in surface_model.atom:
-            res_key = (atom.chain, atom.resi)
-            if res_key not in surface_residues:
-                surface_residues[res_key] = {{
-                    "chain": atom.chain,
-                    "resi": atom.resi,
-                    "resn": atom.resn,
-                    "coords": atom.coord
-                }}
-        
-        result["binding_site_residues"] = list(surface_residues.values())[:50]
-        result["residue_count"] = len(surface_residues)
-        result["analysis"] = f"Detected {{len(surface_residues)}} surface residues as potential binding site"
-        
-        # Clean up
-        cmd.delete("_temp_surface_res")
-        
+        if len(close_residues) >= 3:  # Minimum 3 residues for a pocket
+            pocket_clusters.append(close_residues)
+    
+    # Deduplicate and take top 3 pockets
+    unique_pockets = []
+    seen_residue_sets = set()
+    for cluster in pocket_clusters:
+        cluster_set = frozenset(cluster)
+        if cluster_set not in seen_residue_sets and len(cluster) >= 3:
+            seen_residue_sets.add(cluster_set)
+            unique_pockets.append({{
+                "residues": [{{"chain": r[0], "resi": r[1], "resn": r[2]}} for r in cluster[:10]],
+                "residue_count": len(cluster),
+                "method": "surface_cluster"
+            }})
+            if len(unique_pockets) >= 3:
+                break
+    
+    result["potential_pockets"] = unique_pockets
+    
+    # Clean up
+    cmd.delete(tmpObj)
+    cmd.delete("_temp_exposed")
+    cmd.delete("_temp_surface_res")
+    
 except Exception as e:
     result["error"] = str(e)
     result["analysis"] = f"Pocket detection failed: {{str(e)}}"
@@ -538,7 +722,7 @@ class LigandComparisonSkill(Skill):
 
     name = "ligand_comparison"
     description = "Compare multiple ligand structures and generate alignment reports."
-    version = "1.0.0"
+    version = "1.1.0"  # Bumped for enhanced alignment
     tags = ["ligand", "comparison", "alignment", "SAR"]
     parameters = [
         SkillParameter(
@@ -560,6 +744,12 @@ class LigandComparisonSkill(Skill):
             enum=["align", "super", "cealign"],
             default="align",
         ),
+        SkillParameter(
+            name="create_com_objects",
+            type="boolean",
+            description="Create center of mass pseudoatoms for visualization",
+            default=False,
+        ),
     ]
 
     async def execute(
@@ -570,6 +760,7 @@ class LigandComparisonSkill(Skill):
         reference = params.get("reference", "")
         mobile = params.get("mobile", "")
         method = params.get("method", "align")
+        create_com_objects = params.get("create_com_objects", False)
 
         if not context.pymol_executor:
             return SkillResult(
@@ -620,12 +811,13 @@ class LigandComparisonSkill(Skill):
             result["rmsd"] = align_data.get("rmsd")
             result["aligned"] = align_data.get("aligned", False)
             
-            # Get additional alignment metrics
+            # Get additional alignment metrics including COM calculation
             metrics_code = f'''
 import json
 cmd = local_vars.get("cmd")
 ref = "{reference}"
 mob = "{mobile}"
+create_com = {str(create_com_objects).lower()}
 
 result = {{}}
 
@@ -663,6 +855,60 @@ try:
     # Estimate alignment quality
     total_common = sum(min(elements_ref.get(e, 0), elements_mob.get(e, 0)) for e in common_elements)
     result["estimated_matched_atoms"] = total_common
+    
+    # ENHANCED: Calculate center of mass for both ligands (PyMolWiki get_com logic)
+    def calculate_com(model, mass_weighted=True):
+        coords = [[atom.coord[0], atom.coord[1], atom.coord[2]] for atom in model.atom]
+        if not coords:
+            return None
+        
+        if mass_weighted:
+            totmass = 0.0
+            x, y, z = 0.0, 0.0, 0.0
+            for atom in model.atom:
+                try:
+                    m = atom.get_mass() if hasattr(atom, 'get_mass') else 12.0
+                    x += atom.coord[0] * m
+                    y += atom.coord[1] * m
+                    z += atom.coord[2] * m
+                    totmass += m
+                except:
+                    pass
+            if totmass > 0:
+                return [x/totmass, y/totmass, z/totmass]
+        
+        # Simple geometric center
+        return [
+            sum(c[0] for c in coords) / len(coords),
+            sum(c[1] for c in coords) / len(coords),
+            sum(c[2] for c in coords) / len(coords)
+        ]
+    
+    com_ref = calculate_com(model_ref)
+    com_mob = calculate_com(model_mob)
+    
+    result["reference_com"] = {{"x": com_ref[0], "y": com_ref[1], "z": com_ref[2]}} if com_ref else None
+    result["mobile_com"] = {{"x": com_mob[0], "y": com_mob[1], "z": com_mob[2]}} if com_mob else None
+    
+    # Calculate COM distance
+    if com_ref and com_mob:
+        import math
+        com_dist = math.sqrt(sum((com_ref[i] - com_mob[i])**2 for i in range(3)))
+        result["com_distance_Å"] = round(com_dist, 3)
+    
+    # Create COM pseudoatoms if requested (PyMolWiki com command logic)
+    if create_com:
+        if com_ref:
+            com_obj_ref = cmd.get_unused_name(ref + "_COM", 0)
+            cmd.pseudoatom(com_obj_ref, pos=com_ref)
+            cmd.show("spheres", com_obj_ref)
+            result["reference_com_object"] = com_obj_ref
+        
+        if com_mob:
+            com_obj_mob = cmd.get_unused_name(mob + "_COM", 0)
+            cmd.pseudoatom(com_obj_mob, pos=com_mob)
+            cmd.show("spheres", com_obj_mob)
+            result["mobile_com_object"] = com_obj_mob
     
 except Exception as e:
     result["metrics_error"] = str(e)
@@ -937,3 +1183,12 @@ class TrajectoryAnalysisSkill(Skill):
             output=result,
             metadata={"analyses": analyses},
         )
+
+
+# Skill registry for auto-registration
+BUILTIN_SKILLS = [
+    StructureAnalysisSkill,
+    BindingSiteAnalysisSkill,
+    LigandComparisonSkill,
+    TrajectoryAnalysisSkill,
+]
