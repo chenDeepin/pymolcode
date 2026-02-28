@@ -250,60 +250,6 @@ class ToolRegistry:
             )
         )
 
-    def _handle_pymol_align(self, args: dict[str, Any]) -> str:
-        mobile = args.get("mobile", "")
-        target = args.get("target", "")
-        method = args.get("method", "ce")
-        cutoff = args.get("cutoff", 1.0)
-        cycles = args.get("cycles", 0)
-        result = self._execute_pymol_command(
-            "align",
-            {
-                "mobile": mobile,
-                "target": target,
-                "method": method,
-                "cutoff": cutoff,
-                "cycles": cycles,
-            },
-        )
-        return json.dumps(result)
-
-        # PyMOL: Align structures
-
-        # PyMOL: Align structures
-        self.register(
-            Tool(
-                schema=ToolSchema(
-                    name="pymol_align",
-                    description="Align mobile structure to target reference structure using backbone atoms.",
-                    parameters={
-                        "type": "object",
-                        "properties": {
-                            "mobile": {
-                                "type": "string",
-                                "description": "Selection for mobile structure to align",
-                            },
-                            "target": {
-                                "type": "string",
-                                "description": "Selection for target/reference structure",
-                            },
-                            "method": {
-                                "type": "string",
-                                "enum": ["ce", "align"],
-                                "description": "Alignment method: 'ce' (default) or 'align'",
-                            },
-                            "cutoff": {
-                                "type": "number",
-                                "description": "RMSD cutoff for rejection (default: 1.0)",
-                            },
-                        },
-                        "required": ["mobile", "target"],
-                    },
-                ),
-                handler=self._handle_pymol_align,
-            )
-        )
-
         # Python code execution (sandboxed)
         self.register(
             Tool(
@@ -326,6 +272,24 @@ class ToolRegistry:
                 requires_confirmation=True,
             )
         )
+
+    def _handle_pymol_align(self, args: dict[str, Any]) -> str:
+        mobile = args.get("mobile", "")
+        target = args.get("target", "")
+        method = args.get("method", "ce")
+        cutoff = args.get("cutoff", 1.0)
+        cycles = args.get("cycles", 0)
+        result = self._execute_pymol_command(
+            "align",
+            {
+                "mobile": mobile,
+                "target": target,
+                "method": method,
+                "cutoff": cutoff,
+                "cycles": cycles,
+            },
+        )
+        return json.dumps(result)
 
     def register(self, tool: Tool) -> None:
         """Register a tool."""
