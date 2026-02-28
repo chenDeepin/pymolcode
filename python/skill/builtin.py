@@ -1044,7 +1044,7 @@ class TrajectoryAnalysisSkill(Skill):
                     # Get reference (first frame)
                     ref_pos = u.select_atoms(selection).positions.copy()
 
-                    for ts in u.trajectory:
+                    for _ts in u.trajectory:
                         mobile_pos = u.select_atoms(selection).positions
                         if len(mobile_pos) == len(ref_pos):
                             # Calculate RMSD
@@ -1067,7 +1067,7 @@ class TrajectoryAnalysisSkill(Skill):
 
                     # Collect all positions
                     all_pos = []
-                    for ts in u.trajectory:
+                    for _ts in u.trajectory:
                         all_pos.append(u.select_atoms(selection).positions.copy())
 
                     if all_pos:
@@ -1091,7 +1091,7 @@ class TrajectoryAnalysisSkill(Skill):
                     # Radius of gyration
                     rg_values = []
 
-                    for ts in u.trajectory:
+                    for _ts in u.trajectory:
                         atoms = u.select_atoms(selection)
                         if len(atoms) > 0:
                             masses = atoms.masses
