@@ -975,7 +975,7 @@ class TrajectoryAnalysisSkill(Skill):
     async def execute(
         self,
         params: dict[str, Any],
-        context: SkillContext = None,
+        _context: SkillContext = None,
     ) -> SkillResult:
         trajectory_file = params.get("trajectory_file", "")
         topology_file = params.get("topology_file", "")
@@ -1027,7 +1027,6 @@ class TrajectoryAnalysisSkill(Skill):
 
             try:
                 import MDAnalysis as mda
-                from MDAnalysis.analysis import rms, align
                 import numpy as np
 
                 # Load universe
