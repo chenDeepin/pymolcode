@@ -329,15 +329,24 @@ def init_plugin(app: Any = None) -> PymolcodePanel | None:
     qt_app.setApplicationName("PymolCode")
     qt_app.setApplicationDisplayName("PymolCode")
 
-    main_win = qt_app.activeWindow()
-    if main_win is None:
-        # Try to find the main window from topLevelWidgets
-        for w in qt_app.topLevelWidgets():
-            if w.windowTitle() and "PyMOL" in w.windowTitle():
+    from PyQt5.QtWidgets import QMainWindow, QDockWidget
+    
+    main_win = None
+    # First try to find QMainWindow from topLevelWidgets
+    for w in qt_app.topLevelWidgets():
+        if isinstance(w, QMainWindow) and w.windowTitle():
+            if "PyMOL" in w.windowTitle() or "PymolCode" in w.windowTitle():
                 main_win = w
                 break
-        if main_win is None:
-            return None
+    
+    if main_win is None:
+        # Fallback to active window if it's a QMainWindow
+        active = qt_app.activeWindow()
+        if isinstance(active, QMainWindow):
+            main_win = active
+    
+    if main_win is None:
+        return None
 
     main_win.setWindowTitle("PymolCode")
 
