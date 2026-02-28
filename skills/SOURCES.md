@@ -93,3 +93,8 @@ Individual skills retain their original copyright notices. See:
 ---
 
 *Last updated: February 2026*
+
+### PyMOLWiki Scripts
+- Source: https://github.com/Pymol-Scripts/Pymol-script-repo
+- License: BSD-2-Clause (permissive, commercial-compatible)
+- Scripts integrated: show_ligand_interactions, findseq, colorbyrmsd, extra_fit, center_of_mass, quickdisplays, findSurfaceResidues, distancetoatom, anglebetweenhelices, cgo_arrow

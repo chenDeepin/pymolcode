@@ -19,6 +19,8 @@
 - 🔧 **Extensible Skill System** - Drug discovery-specific agent skills with Oh-My-OpenCode integration
 - 🔌 **MCP Integration** - Model Context Protocol for standardized tool interoperability
 - 🛡️ **Safety Controls** - Policy-guarded actions for scientific reproducibility
+- 🌐 **REST API** - Remote control via port 9124
+- 📦 **10 PyMOLWiki Scripts** - Integrated utility scripts from the community
 
 ## Architecture
 
@@ -90,6 +92,9 @@ export GITHUB_COPILOT_CLIENT_ID="your-client-id"
 > **Note**: OAuth is optional. You can also use API keys directly with `pymolcode auth login <provider>`.
 
 > **Security**: Never commit client IDs or secrets to version control. For GitHub upload, all OAuth client IDs are read from environment variables.
+
+## Extensions
+PymolCode works standalone. For remote AI control via Telegram/Discord, see [OpenClaw Extension](docs/openclaw-extension.md).
 
 ## Usage
 
